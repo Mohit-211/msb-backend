@@ -1,17 +1,9 @@
 const httpStatus = require("http-status");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
-const moment = require("moment");
 
-const sequelize = require("../config/central.db");
-const { Admin, Role } = require("../models");
-const validateEmail = require("../helpers/validateEmail");
 const validatePassword = require("../helpers/validatePassword");
-const tokenTypes = require("../config/tokens");
 const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
-const { roleService, authService } = require("../services");
+const { authService } = require("../services");
 const pick = require("../utils/pick");
 const responseWrapper = require("../config/responseWrapper");
 

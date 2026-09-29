@@ -1,22 +1,13 @@
 const httpStatus = require("http-status");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
-const moment = require("moment");
-const randomize = require("randomatic");
 const jwt = require("jsonwebtoken");
 
-const sequelize = require("../config/central.db");
-const { Admin, Role, Department } = require("../models");
+const { Admin, Role } = require("../models");
 const validateEmail = require("../helpers/validateEmail");
-const validatePassword = require("../helpers/validatePassword");
-const tokenTypes = require("../config/tokens");
 const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
 
 const { roleService } = require("../services");
 const config = require("../config/config");
-const Roles = require("../config/roles");
 
 const validateCreateAdminBody = catchAsync(async (req, res, next) => {
   const { name, email, role_id } = req.body;

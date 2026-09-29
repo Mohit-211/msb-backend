@@ -1,11 +1,8 @@
-const sequelize = require("../config/central.db");
-
 const OTP = require("./otp.model");
 const User = require("./user.model");
 const UserToken = require("./userToken.model");
 const UserAttachment = require("./userAttachment.model");
 const LoginTiming = require("./loginTiming.model.js")
-
 
 const ContactUs = require("./contactUs.model");
 const Faq = require("./faq.model");
@@ -65,8 +62,6 @@ async function init() {
   User.hasMany(UserAttachment, { foreignKey: "user_id", as: "attachements" });
   UserAttachment.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-
-
   User.hasMany(LoginTiming, { foreignKey: "user_id", as: "user_login" });
   LoginTiming.belongsTo(User, { foreignKey: "user_id", as: "login_user" });
 
@@ -116,7 +111,6 @@ async function init() {
 
   AiStory.belongsTo(User, { foreignKey: "created_by", as: "generated_by" });
   User.hasMany(AiStory, { foreignKey: "created_by", as: "user_stories" });
-
 
   Blogs.belongsTo(AiStory, { foreignKey: "ai_story_id", as: "blog_ai_stories" });
   AiStory.hasMany(Blogs, { foreignKey: "ai_story_id", as: "ai_stoies_blog" });

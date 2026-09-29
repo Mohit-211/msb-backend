@@ -1,8 +1,6 @@
 const httpStatus = require("http-status");
 const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
-const moment = require("moment");
+const { Sequelize, Op } = require("sequelize");
 const randomize = require("randomatic");
 const jwt = require("jsonwebtoken");
 
@@ -19,9 +17,6 @@ const {
   UserToken,
   LoginTiming,
 } = require("../models");
-const validateEmail = require("../helpers/validateEmail");
-const validatePassword = require("../helpers/validatePassword");
-const tokenTypes = require("../config/tokens");
 const ApiError = require("../utils/ApiError");
 const config = require("../config/config");
 const {
@@ -455,8 +450,6 @@ const getUserCount = async () => {
   });
   return userCount;
 };
-
-
 
 const getUserCountByMonth = async (inputYear) => {
   try {

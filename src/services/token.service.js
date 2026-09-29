@@ -2,11 +2,10 @@ const jwt = require('jsonwebtoken')
 const moment = require('moment')
 const config = require('../config/config');
 
-const { Users, UserToken } = require('../models');
+const { UserToken } = require('../models');
 const  tokenTypes  = require('../config/tokens');
 const { QueryTypes } = require('sequelize');
 const  sequelize  = require('../config/central.db');
-
 
 const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
 
@@ -18,7 +17,6 @@ const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
     };
     return jwt.sign(payload, secret);
 };
-
 
 const saveToken = async (token, userId, expires, type) => {
 
@@ -42,7 +40,6 @@ const saveLoginTiming = async (token, userId) => {
     return tokenDoc;
   };
 
-
 const verifyToken = async (token, type) => {
 
     const payload = jwt.verify(token, config.jwt.secret);
@@ -64,7 +61,6 @@ const verifyToken = async (token, type) => {
     };
     return tokenDoc;
 };
-
 
 const generateAuthTokens = async (user) => {
 
@@ -93,7 +89,6 @@ const generateAuthTokens = async (user) => {
         }
     };
 };
-
 
 module.exports = {
     generateToken,

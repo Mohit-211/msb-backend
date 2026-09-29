@@ -1,15 +1,10 @@
 const httpStatus = require("http-status");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
-const moment = require("moment");
 
 const catchAsync = require("../utils/catchAsync");
 
 const { userService } = require("../services");
 const pick = require("../utils/pick");
 const responseWrapper = require("../config/responseWrapper");
-const { use } = require("passport");
 
 const getProfile = catchAsync(async (req, res) => {
   const response = await userService.getProfile(req.body);

@@ -1,9 +1,4 @@
 const httpStatus = require("http-status");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
-const moment = require("moment");
-
 
 const catchAsync = require("../utils/catchAsync");
 const { faqService } = require("../services");

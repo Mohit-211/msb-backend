@@ -1,7 +1,7 @@
 const httpStatus = require("http-status");
 const slugify = require("slugify");
 
-const { Category, SubCategory } = require("../models");
+const { Category } = require("../models");
 const ApiError = require("../utils/ApiError");
 
 const findCategoryById = async (id) => {
@@ -101,7 +101,6 @@ const getAllCategorys = async () => {
 
   return sortedCategories;
 };
-
 
 const deleteCategory = async (reqBody) => {
   const categoryDoc = await Category.findOne({

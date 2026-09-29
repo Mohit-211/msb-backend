@@ -1,30 +1,13 @@
 const httpStatus = require("http-status");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
-const moment = require("moment");
-const randomize = require("randomatic");
 const jwt = require("jsonwebtoken");
 
-const sequelize = require("../config/central.db");
-const {
-  User,
-  OTP,
-  UserAttachment,
-  UserToken,
-  Category,
-  SubCategory,
-} = require("../models");
+const { User, OTP, UserToken } = require("../models");
 const validateEmail = require("../helpers/validateEmail");
 const validatePassword = require("../helpers/validatePassword");
 const tokenTypes = require("../config/tokens");
 const catchAsync = require("../utils/catchAsync");
-const ApiError = require("../utils/ApiError");
 
-const { roleService } = require("../services");
 const config = require("../config/config");
-const Roles = require("../config/roles");
-const otpTypes = require("../config/otpType");
 const responseWrapper = require("../config/responseWrapper");
 
 const validateRegisterUserBody = catchAsync(async (req, res, next) => {
@@ -202,7 +185,6 @@ const validateNewBlogBody = catchAsync(async (req, res, next) => {
   const categoryNames = categories
     .split(",")
     .map((categoryName) => categoryName.trim());
-
 
   req.body.categories = categoryNames;
 

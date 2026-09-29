@@ -2,7 +2,6 @@ const httpStatus = require("http-status");
 
 const catchAsync = require("../utils/catchAsync");
 const { departmentService } = require("../services");
-const sendApiResponse = require("../config/responseWrapper");
 
 const createDepartment = catchAsync(async (req, res) => {
   await departmentService.createDepartment(req.body);

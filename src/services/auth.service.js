@@ -1,11 +1,8 @@
 const httpStatus = require("http-status");
 const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
 const moment = require("moment");
 const randomize = require("randomatic");
 
-const sequelize = require("../config/central.db");
 const {
   OTP,
   User,
@@ -21,7 +18,6 @@ const {
   sendEmailVerification,
   sendResetPasswordConfirmationMail,
 } = require("./email.service");
-const otpTypes = require("../config/otpType");
 const { generateAuthTokens } = require("./token.service");
 
 const sendOTP = async ({ email, type }) => {

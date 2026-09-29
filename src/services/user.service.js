@@ -1,26 +1,11 @@
 const httpStatus = require("http-status");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
-const moment = require("moment");
-const randomize = require("randomatic");
-const jwt = require("jsonwebtoken");
+const { Op } = require("sequelize");
 
 const sequelize = require("../config/central.db");
-const {
-  User,
-  UserAttachment,
-  Blogs,
-  BlogAttachment,
-  BlogCategory,
-  Category,
-  BlogViews,
-} = require("../models");
+const { User, UserAttachment, Blogs, BlogAttachment, Category, BlogViews } = require("../models");
 
 const ApiError = require("../utils/ApiError");
 
-const firebaseAdmin = require("../config/firebaseAdmin");
-const { result } = require("lodash");
 
 const getProfile = async (body) => {
   const { user } = body;
@@ -162,26 +147,6 @@ const searchUserByNameOrUsername = async (body, query, params) => {
   } catch (error) {
     console.log(error);
     return [];
-  }
-};
-
-const sendNotification = async (reqBody) => {
-  const { title, body, url } = reqBody;
-
-  try {
-    await firebaseAdmin.messaging().sendMulticast({
-      tokens,
-      notification: {
-        title,
-        body,
-        url,
-      },
-    });
-    // Need to store in db
-    return "Successfully sent notifications!";
-  } catch (error) {
-    console.log(error);
-    return "Something went wrong While Sending Notification!";
   }
 };
 
@@ -444,7 +409,6 @@ module.exports = {
   getProfile,
   deactivateAccount,
   searchUserByNameOrUsername,
-  sendNotification,
   notificationToogle,
   getBlogById,
   searchBlog,

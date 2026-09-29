@@ -1,18 +1,9 @@
 const httpStatus = require("http-status");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
-const moment = require("moment");
 
-const sequelize = require("../config/central.db");
-const { Admin, Role } = require("../models");
-const validateEmail = require("../helpers/validateEmail");
-const validatePassword = require("../helpers/validatePassword");
-const tokenTypes = require("../config/tokens");
+const { Admin } = require("../models");
 const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
 const { adminService } = require("../services");
-const pick = require("../utils/pick");
 const responseWrapper = require("../config/responseWrapper");
 
 // const createAdminUser = catchAsync(async (req, res) => {
@@ -224,8 +215,6 @@ const getLoginLogs = catchAsync(async (req, res) => {
     data: user,
   });
 });
-
-
 
 //update organization status
 const updatePaymentStatus = catchAsync(async (req, res) => {

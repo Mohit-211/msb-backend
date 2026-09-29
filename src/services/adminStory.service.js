@@ -3,7 +3,7 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
 const { AiStory, Blogs, BlogCategory, User,Category,BlogAttachment } = require("../models");
-const { Sequelize, Op } = require("sequelize");
+const { Op } = require("sequelize");
 
 const getAllGeneratedStories = async () => {
 	try {
@@ -39,7 +39,6 @@ const getAllGeneratedStories = async () => {
 		);
 	}
 };
-
 
 const getStoryById = async (id) => {
 	try {
@@ -204,9 +203,6 @@ const makeGeneratedStoryLive = async (reqBody, id, files) => {
 		);
 	}
 };
-
-
-
 
 module.exports = {
 	getAllGeneratedStories,

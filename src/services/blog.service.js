@@ -1,7 +1,5 @@
 const httpStatus = require("http-status");
-const slugify = require("slugify");
-const { Sequelize, Op } = require("sequelize");
-const moment = require("moment-timezone");
+const { Sequelize } = require("sequelize");
 
 const ApiError = require("../utils/ApiError");
 const {

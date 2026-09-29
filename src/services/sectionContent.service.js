@@ -1,5 +1,4 @@
 const httpStatus = require("http-status");
-const slugify = require("slugify");
 
 const ApiError = require("../utils/ApiError");
 const SectionContent = require("../models/sectionContent.model");

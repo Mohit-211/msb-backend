@@ -1,5 +1,4 @@
 const httpStatus = require("http-status");
-const slugify = require("slugify");
 
 const { SocialLogins } = require("../models");
 const ApiError = require("../utils/ApiError");

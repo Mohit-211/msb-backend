@@ -1,9 +1,6 @@
 /** @format */
 
-const httpStatus = require("http-status");
-
 const catchAsync = require("../utils/catchAsync");
-const pick = require("../utils/pick");
 const responseWrapper = require("../config/responseWrapper");
 const { adminStoryService } = require("../services");
 
@@ -11,7 +8,6 @@ const getAllGeneratedStories = catchAsync(async (req, res) => {
 	let result = await adminStoryService.getAllGeneratedStories();
 	responseWrapper(res, result);
 });
-
 
 const getStoryById = catchAsync(async (req, res) => {
     const storyDoc = await adminStoryService.getStoryById(
@@ -34,7 +30,6 @@ const getStoryById = catchAsync(async (req, res) => {
 			: "Story updated successfully"
 	);
 });
-
 
 module.exports = {
 	getAllGeneratedStories,

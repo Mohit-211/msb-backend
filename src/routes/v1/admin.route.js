@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const {adminController,roleController} = require('../../controllers');
+const { adminController } = require('../../controllers');
 const adminMiddleware = require('../../middlewares/admin.middleware');
 const roleMiddleware = require('../../middlewares/role.middleware');
 
@@ -24,7 +24,6 @@ router.post('/createUser',[adminMiddleware.validateJWTtoken],adminController.adm
 
 router.post('/updatepaymentStatus',adminController.updatePaymentStatus)
 
-
 router.get('/getUserCount',[adminMiddleware.validateJWTtoken,roleMiddleware.isSuperAdmin],adminController.getUserCount);
 router.get('/getUserCountByMonth',adminController.getUserCountByMonth);
 router.get('/getBlogCount',adminController.getBlogCount);
@@ -33,8 +32,5 @@ router.get('/getMostViewedStory',adminController.getMostViewedStory);
 router.get('/getMostLikedStory',adminController.getMostLikedStory);
 router.get('/getLoginLogs',adminController.getLoginLogs);
 router.post('/getLoginLogsOfUser',adminController.getLoginLogsOfUser);
-
-
-
 
 module.exports = router;

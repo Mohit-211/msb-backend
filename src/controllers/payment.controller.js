@@ -1,5 +1,5 @@
 const httpStatus = require("http-status");
-const { Sequelize, QueryTypes, Op } = require("sequelize");
+const { Op } = require("sequelize");
 const moment = require("moment");
 const Stripe = require("stripe");
 
