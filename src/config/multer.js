@@ -1,21 +1,21 @@
 const multer = require('multer');
 const path = require('path');
 
-const PUBLIC_DIR = path.resolve(__dirname, "../../public");
+const { STORAGE_DIR } = require("./config");
 
 // Set storage engine
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         if (file.fieldname === 'videos') {
-            cb(null, PUBLIC_DIR + "/uploads/videos");
+            cb(null, path.join(STORAGE_DIR, "videos"));
         } else if (file.fieldname === 'images') {
-            cb(null, PUBLIC_DIR + "/uploads/images");
+            cb(null, path.join(STORAGE_DIR, "images"));
         } else if (file.fieldname === 'gifs') {
-            cb(null, PUBLIC_DIR + "/uploads/gifs");
+            cb(null, path.join(STORAGE_DIR, "gifs"));
         } else if (file.fieldname === 'docs') {
-            cb(null, PUBLIC_DIR + "/uploads/docs");
+            cb(null, path.join(STORAGE_DIR, "docs"));
         }else if (file.fieldname === 'audios') {
-            cb(null, PUBLIC_DIR + "/uploads/audios");
+            cb(null, path.join(STORAGE_DIR, "audios"));
         }else {
             cb(new Error('Invalid fieldname'));
         }

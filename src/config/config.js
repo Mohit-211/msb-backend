@@ -60,6 +60,9 @@ const envVarsSchema = Joi.object({
 
   // OpenAI
   OPENAI_KEY: Joi.string().optional(),
+
+  // Absolute path to uploaded files (images, docs, ...). Defaults to public/uploads for local dev.
+  STORAGE_DIR: Joi.string().optional(),
 }).unknown();
 
 const { value: envVars, error } = envVarsSchema
@@ -142,4 +145,8 @@ module.exports = {
     envVars.STRIPE_WEBHOOK_SECRET_CUSTOMER_INVOICE_PRICE,
 
   OPENAI_KEY: envVars.OPENAI_KEY,
+
+  STORAGE_DIR: path.resolve(
+    envVars.STORAGE_DIR || path.join(__dirname, "../../public/uploads")
+  ),
 };

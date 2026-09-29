@@ -30,12 +30,13 @@ if (config.env !== "test") {
 }
 
 const PUBLIC_DIR = path.resolve(__dirname, "./public");
+const { STORAGE_DIR } = config;
 
-app.use("/images", express.static(`${PUBLIC_DIR}/uploads/images`));
-app.use("/videos", express.static(`${PUBLIC_DIR}/uploads/videos`));
-app.use("/gifs", express.static(`${PUBLIC_DIR}/uploads/gifs`));
-app.use("/docs", express.static(`${PUBLIC_DIR}/uploads/docs`));
-app.use("/songs", express.static(`${PUBLIC_DIR}/uploads/songs`));
+app.use("/images", express.static(path.join(STORAGE_DIR, "images")));
+app.use("/videos", express.static(path.join(STORAGE_DIR, "videos")));
+app.use("/gifs", express.static(path.join(STORAGE_DIR, "gifs")));
+app.use("/docs", express.static(path.join(STORAGE_DIR, "docs")));
+app.use("/songs", express.static(path.join(STORAGE_DIR, "songs")));
 
 app.use(helmet());
 
