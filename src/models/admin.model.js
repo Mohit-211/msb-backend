@@ -16,13 +16,6 @@ Admin.init(
         key: "id",
       },
     },
-    // department_id: {
-    //   type: DataTypes.INTEGER,
-    //   references: {
-    //     model: "departments",
-    //     key: "id",
-    //   },
-    // },
     name: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -87,11 +80,6 @@ Admin.init(
 Admin.isEmailTaken = async function (email_id) {
   let u = await this.findOne({ where: { email_id: email_id } });
   return !!u;
-};
-//isMobileTaken check email exists or not
-Admin.isMobileTaken = async function (mobile) {
-  let u_mobile = await this.findOne({ where: { mobile: mobile } });
-  return !!u_mobile;
 };
 Admin.beforeUpdate(async (Admin) => {
   Admin.updated_at = new Date()

@@ -6,36 +6,25 @@ const randomize = require("randomatic");
 const {
   OTP,
   User,
-  UserAttachment,
   UserToken,
   LoginTiming,
 } = require("../models");
 const tokenTypes = require("../config/tokens");
 const ApiError = require("../utils/ApiError");
-const config = require("../config/config");
 const {
   sendForgotPasswordOTP,
-  sendEmailVerification,
   sendResetPasswordConfirmationMail,
 } = require("./email.service");
 const { generateAuthTokens } = require("./token.service");
 
+// Users are created by admins, so the only OTP left is the forgot-password one.
 const sendOTP = async ({ email, type }) => {
-  if (type === "forget_password") {
-    // No need to check if email is already taken for forget_password
-  } else if (
-    type === "email_verification" &&
-    (await User.isEmailTaken(email))
-  ) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Email already taken");
+  if (type !== "forget_password") {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid OTP type");
   }
 
   const generatedOTP = randomize("0", 4);
-  if (type === "email_verification") {
-    await sendEmailVerification(email, generatedOTP);
-  } else {
-    await sendForgotPasswordOTP(email, generatedOTP);
-  }
+  await sendForgotPasswordOTP(email, generatedOTP);
 
   let otpObj = {
     email: email,
@@ -46,97 +35,6 @@ const sendOTP = async ({ email, type }) => {
   await OTP.update({ is_active: false }, { where: { email: email } });
   let otpDoc = await OTP.create(otpObj);
   return otpDoc;
-};
-
-const verifyOTP = async (email, otp, type) => {
-  if (!email || !otp || !type) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "Please Enter Required Fields : [email, otp, type]"
-    );
-  }
-
-  const otpDoc = await OTP.findOne({
-    where: { email: email, type: type, is_active: true, is_verified: false },
-  });
-  if (!otpDoc || Object.keys(otpDoc).length === 0) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid Email or Type");
-  }
-
-  if (otp !== otpDoc.code) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid OTP Entered");
-  }
-
-  if (otpDoc.otp_expiration_time < new Date()) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "OTP has been Expired");
-  }
-
-  let isUpdate = await OTP.update(
-    {
-      is_active: false,
-      is_verified: true,
-    },
-    {
-      where: { email: email, type: type },
-    }
-  );
-  return isUpdate;
-};
-
-const register = async (body, files) => {
-  const { name, email, mobile, password, confirm_password } = body;
-  let salt = bcrypt.genSaltSync(10);
-  const userObj = {
-    name: name,
-    email: email,
-    mobile: mobile,
-    password: bcrypt.hashSync(password, salt),
-  };
-  const user = await User.create(userObj);
-  if (!user) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to create User"
-    );
-  }
-  if (
-    files &&
-    Object.keys(files).length !== 0 &&
-    files.images &&
-    files.images.length !== 0
-  ) {
-    for (let i = 0; i < files.images.length; i++) {
-      let currImage = files.images[i];
-      const userAttachmentObj = {
-        user_id: user.id,
-        title: "Profile Image",
-        file_type: "Image",
-        file_name: currImage.filename,
-        file_uri: "/images",
-        file_size: currImage.size,
-      };
-      await UserAttachment.create(userAttachmentObj);
-    }
-  } else if (
-    files &&
-    Object.keys(files).length !== 0 &&
-    files.gifs &&
-    files.gifs.length !== 0
-  ) {
-    for (let i = 0; i < files.gifs.length; i++) {
-      let currImage = files.gifs[i];
-      const userAttachmentObj = {
-        user_id: user.id,
-        title: "Profile Image",
-        file_type: "Gif",
-        file_name: currImage.filename,
-        file_uri: "/gifs",
-        file_size: currImage.size,
-      };
-      await UserAttachment.create(userAttachmentObj);
-    }
-  }
-  return user;
 };
 
 const login = async (reqBody) => {
@@ -169,7 +67,7 @@ const login = async (reqBody) => {
 };
 
 const resetPassword = async (reqBody) => {
-  const { old_password, new_password, confirm_password, user } = reqBody;
+  const { old_password, confirm_password, user } = reqBody;
 
   const validPass = await bcrypt.compare(old_password, user?.password);
   if (!validPass) {
@@ -283,32 +181,10 @@ const logout = async (reqBody, headers) => {
   return "";
 };
 
-const checkTokenStatus = async (reqBody) => {
-  const { token } = reqBody;
-
-  const userToken = await UserToken.findOne({
-    where: { token_type: tokenTypes.ACCESS, token: token },
-  });
-
-  if (!userToken) {
-    throw new ApiError(httpStatus.OK, "Token not found.");
-  }
-
-  if (userToken.is_active == true) {
-    return "Token is active";
-    // return { token_status: "active" };
-  } else {
-    return "Token is expired";
-  }
-};
-
 module.exports = {
-  register,
   login,
   resetPassword,
   sendOTP,
-  verifyOTP,
   forgotPassword,
   logout,
-  checkTokenStatus,
 };

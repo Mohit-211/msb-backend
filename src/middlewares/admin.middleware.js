@@ -1,7 +1,7 @@
 const httpStatus = require("http-status");
 const jwt = require("jsonwebtoken");
 
-const { Admin, Role } = require("../models");
+const { Admin } = require("../models");
 const validateEmail = require("../helpers/validateEmail");
 const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
@@ -31,8 +31,6 @@ const validateCreateAdminBody = catchAsync(async (req, res, next) => {
   if (!isValidRoleId)
     throw new ApiError(httpStatus.BAD_REQUEST, "|=> Invalid Role Id <=|");
 
-  // const isValidDepartmentId = await Department.findByPk(parseInt(department_id));
-  // if(!isValidDepartmentId) throw new ApiError(httpStatus.BAD_REQUEST, '|=> Invalid Department Id <=|');
   next();
 });
 

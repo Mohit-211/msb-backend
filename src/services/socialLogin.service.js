@@ -9,18 +9,6 @@ const createSocialLogin = async (reqBody) => {
     redirection_url: reqBody.redirection_url,
   };
 
-  // if (
-  //   files &&
-  //   Object.keys(files).length !== 0 &&
-  //   files.images &&
-  //   files.images.length !== 0
-  // ) {
-  //   let currImage = files.images[0];
-  //   contentObj["file_uri"] = "/images";
-  //   contentObj["file_type"] = "Image";
-  //   contentObj["file_name"] = currImage.filename;
-  // }
-
   const contentDoc = await SocialLogins.create(contentObj);
   if (!contentDoc) {
     throw new ApiError(
@@ -75,18 +63,6 @@ const updateSocialLogin = async (reqBody) => {
   ) {
     contentDoc["redirection_url"] = reqBody.redirection_url;
   }
-
-  // if (
-  //   files &&
-  //   Object.keys(files).length !== 0 &&
-  //   files.images &&
-  //   files.images.length !== 0
-  // ) {
-  //   let currImage = files.images[0];
-  //   contentDoc["file_uri"] = "/images";
-  //   contentDoc["file_type"] = "Image";
-  //   contentDoc["file_name"] = currImage.filename;
-  // }
 
   await contentDoc.save();
 

@@ -12,26 +12,15 @@ router.put('/updateBlog', [ adminMiddleware.validateJWTtoken ], blogController.u
 router.delete('/deleteBlog', [ adminMiddleware.validateJWTtoken ], blogController.deleteBlog);
 
 router.post('/like', [authMiddleware.verifyAuthJWTToken], blogController.likeAndDislikeBlog);
-router.get('/like/:blog_id', [authMiddleware.verifyAuthJWTToken], blogController.getAllUserLikedPostByBlogId);
 router.get('/getLikesCount',[authMiddleware.verifyAuthJWTToken],blogController.getLikesCountAndUserLikeStatus)
 
 router.post('/comment', [authMiddleware.verifyAuthJWTToken], blogController.createCommenetInBlog);
 router.get('/getAllCommentByBlogId',[authMiddleware.verifyAuthJWTToken,],blogController.getAllCommentsByBlogId);
-router.get('/getAllCommentByUserId',[authMiddleware.verifyAuthJWTToken],blogController.getCommentByUserId)
-router.put('/updateComment',[authMiddleware.verifyAuthJWTToken],blogController.updateComment);
-router.delete('/deleteCommentByUser',[authMiddleware.verifyAuthJWTToken],blogController.deleteCommentByUser)
-
 
 router.get('/getAllLikesByBlogId',blogController.getAllLikesByBlogId)
 router.get('/getCommentsByBlogId',blogController.getCommentsByBlogId)
-router.get('/getCommentByCommentId',blogController.getCommentByCommentId)
 router.delete('/deleteCommentByAdmin',[adminMiddleware.validateJWTtoken],blogController.deleteCommentByAdmin)
 
-
-
-
-
 router.post('/:blog_id', userController.getBlogById);
-
 
 module.exports = router;

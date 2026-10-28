@@ -1,6 +1,6 @@
 {
-  "name": "MSB-back-end",
-  "version": "1.0.0",
+  "name": "msb-backend",
+  "version": "2.0.0",
   "description": "",
   "main": "index.js",
   "engines": {
@@ -36,7 +36,6 @@
     "randomatic": "^3.0.0",
     "sequelize": "^6.28.0",
     "slugify": "^1.6.6",
-    "stripe": "^12.17.0",
     "winston": "^3.8.2"
   },
   "devDependencies": {

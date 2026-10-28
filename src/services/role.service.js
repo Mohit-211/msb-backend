@@ -72,14 +72,6 @@ const getAllRoles = async () => {
   return roleDoc;
 };
 
-// const deleteRole = async (id) => {
-//   const roleDoc = await Role.findByPk(id);
-//   if (!roleDoc) {
-//     throw new ApiError(httpStatus.NOT_FOUND, "Role not found");
-//   }
-//   await roleDoc.destroy();
-// };
-
 const deleteRole = async (reqBody) => {
   const roleDoc = await Role.findOne({
     where: { id: reqBody.role_id },

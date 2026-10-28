@@ -5,7 +5,6 @@ const config = require('./config.js');
 const sequelizeOptions = {
     host: config.databases.central.host,
     dialect: 'mysql',
-    // timezone: '+05:30',
     pool: {
         max: 10,
         min: 0,

@@ -10,14 +10,6 @@ router.get('/profile', [authMiddleware.verifyAuthJWTToken], userController.getPr
 
 router.put('/updateProfile', [authMiddleware.verifyAuthJWTToken], userController.updateUserProfile);
 
-router.put('/notifications', [authMiddleware.verifyAuthJWTToken], userController.notificationToogle);
-
-router.delete('/deactivate', [authMiddleware.verifyAuthJWTToken], userController.deactivateAccount);
-
-router.post('/search', [authMiddleware.verifyAuthJWTToken], userController.searchUserByNameOrUsername);
-
-router.post('/searchBlogFromCategory',[authMiddleware.verifyAuthJWTToken],userController.searchBlog)
-
 router.post('/get-blog-from-category',userController.getBlogFromCategory);
 
 router.get('/blog/search',userController.searchBlogByCategoryNameOrBlogHeadings)

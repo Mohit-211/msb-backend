@@ -36,7 +36,6 @@ app.use("/images", express.static(path.join(STORAGE_DIR, "images")));
 app.use("/videos", express.static(path.join(STORAGE_DIR, "videos")));
 app.use("/gifs", express.static(path.join(STORAGE_DIR, "gifs")));
 app.use("/docs", express.static(path.join(STORAGE_DIR, "docs")));
-app.use("/songs", express.static(path.join(STORAGE_DIR, "songs")));
 
 app.use(helmet());
 
@@ -51,10 +50,6 @@ app.get("/api/healthcheck", (req, res) => {
   res.status(200).send({
     response: "ok",
   });
-});
-
-app.get("/test", (req, res) => {
-  res.status(200).send("Hello World !!");
 });
 
 app.use(express.static(PUBLIC_DIR));

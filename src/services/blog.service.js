@@ -1,5 +1,4 @@
 const httpStatus = require("http-status");
-const { Sequelize } = require("sequelize");
 
 const ApiError = require("../utils/ApiError");
 const {
@@ -40,8 +39,6 @@ const createBlog = async (body, files, reqBody) => {
   if (type && typeof type !== "undefined" && type !== "")
     blogObj["type"] = type;
 
-  let blogDoc;
-
   let categoryArr = categories;
 
   try {
@@ -50,8 +47,6 @@ const createBlog = async (body, files, reqBody) => {
       const categoryObj = await Category.findOne({
         where: { id: id },
       });
-
-      // return categoryObj
 
       if (categoryObj && blogDoc) {
         // Create entry in blog_category table
@@ -91,7 +86,7 @@ const createBlog = async (body, files, reqBody) => {
         await BlogAttachment.create(blogAttachmentObj);
       }
     }
-    ("");
+
     if (
       files &&
       Object.keys(files).length !== 0 &&
@@ -106,25 +101,6 @@ const createBlog = async (body, files, reqBody) => {
           file_name: currVideo.filename,
           file_uri: "/videos",
           file_size: currVideo.size,
-        };
-        await BlogAttachment.create(blogAttachmentObj);
-      }
-    }
-
-    if (
-      files &&
-      Object.keys(files).length !== 0 &&
-      files.docs &&
-      files.docs.length !== 0
-    ) {
-      for (let i = 0; i < files.docs.length; i++) {
-        let currDoc = files.docs[i];
-        const blogAttachmentObj = {
-          blog_id: blogDoc.id,
-          file_type: "Video",
-          file_name: currDoc.filename,
-          file_uri: "/videos",
-          file_size: currDoc.size,
         };
         await BlogAttachment.create(blogAttachmentObj);
       }
@@ -250,8 +226,6 @@ const updateBlog = async (body, files) => {
         categories = categories.filter((item) => item !== elm.category_id);
       }
     });
-
-    // return {categories, matchCategoryIds, removedCategoryIds};
 
     removedCategoryIds.map(async (id) => {
       await BlogCategory.destroy({
@@ -395,7 +369,7 @@ const deleteBlog = async (reqBody) => {
   return blogDoc;
 };
 
-const likeAndDislikeBlog = async (body, io) => {
+const likeAndDislikeBlog = async (body) => {
   const { blog_id, user } = body;
 
   const likeObj = {
@@ -432,53 +406,6 @@ const likeAndDislikeBlog = async (body, io) => {
   }
   await postDoc.save();
   return message;
-};
-
-const getAllUserLikedPostByBlogId = async (body, query, params) => {
-  const { user } = body;
-  const { sortBy, limit, offset } = query;
-  const { blog_id } = params;
-
-  const likeDoc = await BlogLike.findAll({
-    attributes: [
-      "id",
-      [
-        Sequelize.fn(
-          "date_format",
-          Sequelize.col("BlogLike.created_at"),
-          "%d %b, %Y"
-        ),
-        "created_at",
-      ],
-    ],
-    where: { blog_id: blog_id, is_active: true },
-    include: [
-      {
-        model: User,
-        as: "liked_by",
-        attributes: ["id", "name"],
-        include: [
-          {
-            model: UserAttachment,
-            as: "attachements",
-            attributes: ["id", "title", "file_type", "file_name", "file_uri"],
-            order: [["id", "desc"]],
-            limit: 1,
-          },
-        ],
-      },
-    ],
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    order: [["created_at", `${sortBy}`]],
-  });
-  if (!likeDoc)
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to Get All Likes User"
-    );
-
-  return likeDoc;
 };
 
 const getLikesCountAndUserLikeStatus = async (body, blog_id) => {
@@ -573,85 +500,6 @@ const getAllCommentsByBlogId = async (body, blog_id) => {
   return sortedComments;
 };
 
-const getCommentByUserId = async (body) => {
-  const { user, blogId } = body;
-  let result = "";
-
-  result = await User.findOne({
-    attributes: ["id", "name", "email", "mobile"],
-    include: [
-      {
-        model: UserAttachment,
-        as: "attachements",
-        attributes: ["id", "title", "file_type", "file_name", "file_uri"],
-        order: [["id", "desc"]],
-        limit: 1,
-      },
-      {
-        model: BlogComment,
-        as: "user_commented_posts",
-        where: { blog_id: blogId }, // Include this line to filter by blogId
-        // attributes: ["id", "text", "createdAt"],
-        // include: [
-        //   {
-        //     model: Blogs,
-        //     where: { id: blogId }, // Include this line to filter by blogId
-        //     as: "comments",
-        //   },
-        // ],
-      },
-    ],
-    where: { id: user?.id, is_active: true },
-  });
-
-  if (!result) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Failed to Get Comment.");
-  }
-
-  return result;
-};
-
-const updateComment = async (body) => {
-  const { user, blog_id, comment } = body; // Assuming you also have an id field in the body
-  let commentObj = {};
-
-  if (comment && typeof comment === "string" && comment !== "") {
-    commentObj["comment"] = comment;
-  }
-
-  const updatedRows = await BlogComment.update(commentObj, {
-    where: { user_id: user?.id, blog_id: blog_id, is_active: true },
-  });
-
-  if (updatedRows === 0) {
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      "Comment not found or not eligible for update."
-    );
-  }
-
-  return commentObj;
-};
-
-const deleteCommentByUser = async (reqBody) => {
-  const blogDoc = await BlogComment.findOne({
-    where: {
-      blog_id: reqBody.blog_id,
-      user_id: reqBody.user.id,
-    },
-  });
-  if (!blogDoc) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Blog not found");
-  }
-  await blogDoc.destroy({
-    where: {
-      blog_id: reqBody.blog_id,
-      user_id: reqBody.user.id,
-      is_active: true,
-    },
-  });
-};
-
 const getAllLikesByBlogId = async (blog_id) => {
   const commentDoc = await BlogLike.findAndCountAll({
     where: { blog_id: blog_id, is_active: true },
@@ -707,18 +555,6 @@ const getCommentsByBlogId = async (blog_id) => {
   return commentDoc;
 };
 
-const getCommentByCommentId = async (comment_id) => {
-  const commentDoc = await BlogComment.findAll({
-    where: { id: comment_id, is_active: true },
-  });
-
-  if (!commentDoc) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to  Comment");
-  }
-
-  return commentDoc;
-};
-
 const deleteCommentByAdmin = async (reqBody) => {
   const blogDoc = await BlogComment.findOne({
     where: {
@@ -748,12 +584,7 @@ module.exports = {
   createCommenetInBlog,
   getAllCommentsByBlogId,
   getLikesCountAndUserLikeStatus,
-  getAllUserLikedPostByBlogId,
-  getCommentByUserId,
-  updateComment,
-  deleteCommentByUser,
   getCommentsByBlogId,
-  getCommentByCommentId,
   deleteCommentByAdmin,
   getAllLikesByBlogId,
 };

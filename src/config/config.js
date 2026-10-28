@@ -23,12 +23,6 @@ const envVarsSchema = Joi.object({
 
   JWT_ACCESS_EXPIRATION_MINUTES: Joi.number().default(30),
 
-  JWT_REFRESH_EXPIRATION_DAYS: Joi.number().default(30),
-
-  JWT_RESET_PASSWORD_EXPIRATION_MINUTES: Joi.number().default(10),
-
-  JWT_VERIFY_EMAIL_EXPIRATION_MINUTES: Joi.number().default(10),
-
   // Email
   SMTP_HOST: Joi.string().optional(),
   SMTP_PORT: Joi.number().optional(),
@@ -40,23 +34,6 @@ const envVarsSchema = Joi.object({
   DEFAULT_API_DATA_LIMIT: Joi.number().default(15),
 
   ACCESSDOMAINS: Joi.string().required(),
-
-  STORY_VALIDATION_TIME_SPAN_HOURS: Joi.number().optional(),
-
-  API_BASE_URL: Joi.string().optional(),
-
-  ADMIN_BASE_URL: Joi.string().optional(),
-
-  DEFAULT_TIMEZONE: Joi.string().default("UTC"),
-
-  // Stripe
-  STRIPE_PUBLISHABLE_KEY: Joi.string().optional(),
-
-  STRIPE_SECRET_KEY: Joi.string().optional(),
-
-  STRIPE_WEBHOOK_SECRET_INTENT_CHARGE: Joi.string().optional(),
-
-  STRIPE_WEBHOOK_SECRET_CUSTOMER_INVOICE_PRICE: Joi.string().optional(),
 
   // OpenAI
   OPENAI_KEY: Joi.string().optional(),
@@ -96,13 +73,6 @@ module.exports = {
     secret: envVars.JWT_SECRET,
 
     accessExpirationMinutes: envVars.JWT_ACCESS_EXPIRATION_MINUTES,
-
-    refreshExpirationDays: envVars.JWT_REFRESH_EXPIRATION_DAYS,
-
-    resetPasswordExpirationMinutes:
-      envVars.JWT_RESET_PASSWORD_EXPIRATION_MINUTES,
-
-    verifyEmailExpirationMinutes: envVars.JWT_VERIFY_EMAIL_EXPIRATION_MINUTES,
   },
 
   email: {
@@ -125,24 +95,6 @@ module.exports = {
   accessDomains: envVars.ACCESSDOMAINS,
 
   defaultLimit: envVars.DEFAULT_API_DATA_LIMIT,
-
-  API_BASE_URL: envVars.API_BASE_URL,
-
-  ADMIN_BASE_URL: envVars.ADMIN_BASE_URL,
-
-  DEFAULT_TIMEZONE: envVars.DEFAULT_TIMEZONE,
-
-  STORY_VALIDATION_TIME_SPAN_HOURS: envVars.STORY_VALIDATION_TIME_SPAN_HOURS,
-
-  STRIPE_PUBLISHABLE_KEY: envVars.STRIPE_PUBLISHABLE_KEY,
-
-  STRIPE_SECRET_KEY: envVars.STRIPE_SECRET_KEY,
-
-  STRIPE_WEBHOOK_SECRET_INTENT_CHARGE:
-    envVars.STRIPE_WEBHOOK_SECRET_INTENT_CHARGE,
-
-  STRIPE_WEBHOOK_SECRET_CUSTOMER_INVOICE_PRICE:
-    envVars.STRIPE_WEBHOOK_SECRET_CUSTOMER_INVOICE_PRICE,
 
   OPENAI_KEY: envVars.OPENAI_KEY,
 

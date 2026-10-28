@@ -182,18 +182,6 @@ const makeGeneratedStoryLive = async (reqBody, id, files) => {
 			}
 		}
 
-		if (files?.docs?.length) {
-			for (let currDoc of files.docs) {
-				await BlogAttachment.create({
-					blog_id: blogDoc.id,
-					file_type: "Document",
-					file_name: currDoc.filename,
-					file_uri: "/docs",
-					file_size: currDoc.size,
-				});
-			}
-		}
-
 		return blogDoc;
 	} catch (error) {
 		console.log(error);

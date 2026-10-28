@@ -1,9 +1,6 @@
 const roleService = require("./role.service");
 const authService = require("./auth.service");
-const departmentService = require("./department.service");
 const userService = require("./user.service");
-const faqService = require("./faq.service");
-const contactUsService = require("./contactUs.service");
 const blogService = require("./blog.service");
 const categoryService = require("./category.service");
 const adminService = require("./admin.service");
@@ -17,10 +14,7 @@ const adminStoryService = require("./adminStory.service")
 module.exports = {
   roleService,
   authService,
-  departmentService,
   userService,
-  faqService,
-  contactUsService,
   blogService,
   categoryService,
   adminService,

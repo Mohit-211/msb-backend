@@ -1,7 +1,6 @@
 const httpStatus = require("http-status");
 const { Op } = require("sequelize");
 
-const sequelize = require("../config/central.db");
 const { User, UserAttachment, Blogs, BlogAttachment, Category, BlogViews } = require("../models");
 
 const ApiError = require("../utils/ApiError");
@@ -100,66 +99,7 @@ const updateUserProfile = async (body, files) => {
   return newUpdatedUserDoc;
 };
 
-const deactivateAccount = async (reqBody) => {
-  const { user } = reqBody;
-
-  const isDeactivated = await User.destroy({ where: { id: user?.id } });
-
-  if (!isDeactivated) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to Deactive your account."
-    );
-  }
-  return "";
-};
-
-const searchUserByNameOrUsername = async (body, query, params) => {
-  const { name } = body;
-  if (name.length < 4)
-    throw new ApiError(httpStatus.BAD_REQUEST, "Minimum 4 character needed");
-  const { sortBy, limit, offset } = query;
-
-  try {
-    let result = [];
-    result = await User.findAll({
-      attributes: ["id", "name"],
-      include: [
-        {
-          model: UserAttachment,
-          as: "attachements",
-          attributes: ["id", "title", "file_type", "file_name", "file_uri"],
-          order: [["id", "desc"]],
-          limit: 1,
-        },
-      ],
-      where: {
-        [Op.or]: [
-          { name: { [Op.like]: `%${name}%` } },
-          { mobile: { [Op.like]: `%${name}%` } },
-        ],
-      },
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [["created_at", `${sortBy}`]],
-    });
-    return result;
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
-};
-
-const notificationToogle = async (body) => {
-  const { user } = body;
-  user.notification = !user.notification;
-  await user.save();
-  return user;
-};
-
-const getBlogById = async (blog_id, body) => {
-  const { user } = body;
-
+const getBlogById = async (blog_id) => {
   const blogDoc = await Blogs.findOne({
     where: { id: blog_id, is_active: true },
     include: [
@@ -185,74 +125,11 @@ const getBlogById = async (blog_id, body) => {
   return blogDoc;
 };
 
-const searchBlog = async (title, slug, heading) => {
-  let whereCondition = { is_active: true };
-
-  if (title && slug) {
-    whereCondition = {
-      ...whereCondition,
-      [Op.and]: [{ slug: slug }, { title: { [Op.iLike]: `%${title}%` } }],
-    };
-  } else if (slug) {
-    whereCondition = {
-      ...whereCondition,
-      slug: slug,
-    };
-  } else if (title) {
-    whereCondition = {
-      ...whereCondition,
-      name: { [Op.iLike]: `%${title}%` },
-    };
-  }
-
-  if (heading && heading.length >= 3) {
-    whereCondition = {
-      ...whereCondition,
-      "$Blogs.heading$": { [Op.iLike]: `%${heading}%` },
-    };
-  }
-
-  const blogDoc = await Category.findOne({
-    // where: { is_active: true, title: title },
-    where: whereCondition,
-    include: [
-      {
-        model: Blogs,
-        as: "Blogs",
-        include: [
-          {
-            model: BlogAttachment,
-            as: "blog_attachment",
-          },
-        ],
-      },
-    ],
-  });
-
-  if (!blogDoc) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to Get Blog from this category"
-    );
-  }
-
-  return blogDoc;
-};
-
-const getBlogFromCategory = async (body, query, params) => {
+const getBlogFromCategory = async (body, query) => {
   const { category_slug } = body;
-  console.log("categoyrslug====>", category_slug);
   const { sortBy, limit, offset } = query;
-  const {} = params;
 
   if (category_slug && category_slug != "all") {
-    // const blogCount = await BlogCategory.count({
-    //   where: {
-    //     is_active: true,
-    //     category_slug: category_slug,
-    //   },
-    // });
-
     const blogDoc = await Blogs.findAndCountAll({
       distinct:true,
       where: {
@@ -286,14 +163,8 @@ const getBlogFromCategory = async (body, query, params) => {
         httpStatus.INTERNAL_SERVER_ERROR,
         "Failed to Get Blog from this category"
       );
-    // return { total: blogCount, blogs: blogDoc };
     return blogDoc
   } else if (category_slug === "all" || !category_slug) {
-    // const allBlogsCount = await Blogs.count({
-    //   where: {
-    //     is_active: true,
-    //   },
-    // });
     const allBlogs = await Blogs.findAndCountAll({
       distinct:true,
       include: [
@@ -313,7 +184,6 @@ const getBlogFromCategory = async (body, query, params) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
-    // return { total: allBlogsCount, blogs: allBlogs };
     return allBlogs
   }
 };
@@ -376,15 +246,6 @@ const markBlogAsViewed = async (body, blog_id) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "Blog not found");
   }
 
-  // Check if the entry already exists
-  // const existingEntry = await BlogViews.findOne({
-  //   where: { user_id: user.id, blog_id: blog_id },
-  // });
-
-  // if (existingEntry) {
-  //   return existingEntry;
-  // }
-
   const viewObj = {
     user_id: user.id,
     blog_id: blog_id,
@@ -407,11 +268,7 @@ const markBlogAsViewed = async (body, blog_id) => {
 module.exports = {
   updateUserProfile,
   getProfile,
-  deactivateAccount,
-  searchUserByNameOrUsername,
-  notificationToogle,
   getBlogById,
-  searchBlog,
   getBlogFromCategory,
   searchBlogByCategoryNameOrBlogHeadings,
   markBlogAsViewed,

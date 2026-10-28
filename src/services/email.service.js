@@ -1,10 +1,7 @@
 const nodemailer = require("nodemailer");
 const config = require("../config/config");
 const logger = require("../config/logger");
-const {
-  forgotPasswordSendOTPFormat,
-  emailVerificationFormat,
-} = require("../../public/Email_Template");
+const { forgotPasswordSendOTPFormat } = require("../../public/Email_Template");
 
 const transport = nodemailer.createTransport(config.email.smtp);
 
@@ -22,24 +19,6 @@ if (config.env !== "test") {
 const sendEmail = async (to, subject, text) => {
   const msg = { from: config.email.from, to, subject, text };
   return await transport.sendMail(msg);
-};
-
-const sendEmailVerification = async (to, otp) => {
-  const message = {
-    from: `${config.email.from}`,
-    to: `${to}`,
-    subject: "Please verify your email",
-    text: `Please click on the following link to verify your email`,
-    html: `${emailVerificationFormat(otp)}`,
-  };
-  transport.sendMail(message, (error, info) => {
-    if (error) {
-      console.log("Email sent error:  ", error);
-      return false;
-    } else {
-      return true;
-    }
-  });
 };
 
 const sendForgotPasswordOTP = async (to, otp) => {
@@ -119,7 +98,6 @@ MSB Team`;
 module.exports = {
   sendForgotPasswordOTP,
   sendResetPasswordConfirmationMail,
-  sendEmailVerification,
   sendUserCredentials,
   sendAdminCredentials,
 };

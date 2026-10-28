@@ -1,7 +1,6 @@
 const httpStatus = require("http-status");
 const bcrypt = require("bcryptjs");
 const { Sequelize, Op } = require("sequelize");
-const randomize = require("randomatic");
 const jwt = require("jsonwebtoken");
 
 const sequelize = require("../config/central.db");
@@ -14,38 +13,15 @@ const {
   BlogComment,
   BlogLike,
   BlogViews,
-  UserToken,
   LoginTiming,
 } = require("../models");
 const ApiError = require("../utils/ApiError");
 const config = require("../config/config");
 const {
-  sendForgotPasswordOTP,
   sendUserCredentials,
   sendAdminCredentials,
 } = require("./email.service");
 const Blog = require("../models/blog.model");
-
-// const createAdminUser = async (userBody) => {
-//   let salt = bcrypt.genSaltSync(10);
-//   const userObj = {
-//     name: userBody.name,
-//     email_id: userBody.email,
-//     password: bcrypt.hashSync(userBody.password, salt),
-//     role_id: userBody.role_id,
-//     // department_id: userBody.department_id,
-//   };
-
-//   const user = await Admin.create(userObj);
-
-//   if (!user) {
-//     throw new ApiError(
-//       httpStatus.INTERNAL_SERVER_ERROR,
-//       "|=> Failed to create User <=|"
-//     );
-//   }
-//   return user;
-// };
 
 const createAdminUser = async (reqBody) => {
   const password = Math.random().toString(36).substring(2, 12);
@@ -55,7 +31,6 @@ const createAdminUser = async (reqBody) => {
     role_id: reqBody.role_id,
     email_id: reqBody.email,
     password: bcrypt.hashSync(password, salt),
-    // password: bcrypt.hashSync(reqBody.password, salt),
   };
   const adminDoc = await Admin.create(adminObj);
   if (!adminDoc) {
@@ -140,82 +115,6 @@ const resetAdminPassword = async (reqBody) => {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       "|=> Incorrect Old Password. <=|"
-    );
-  }
-
-  let salt = bcrypt.genSaltSync(10);
-  const userObj = {
-    password: bcrypt.hashSync(confirm_password, salt),
-  };
-
-  const isUserPasswordUpdate = await Admin.update(userObj, {
-    where: { id: user?.id },
-  });
-
-  if (!isUserPasswordUpdate) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "|=> Failed to Change Password. <=|"
-    );
-  }
-  return "|=> Password Changed Successfully. <=|";
-};
-
-const sendOTP = async (email) => {
-  const user = await Admin.findOne({ where: { email_id: email } });
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "|=> Invalid Email <=|");
-  }
-  const generatedOTP = randomize("0", 6);
-  await sendForgotPasswordOTP(email, generatedOTP);
-
-  await Admin.update(
-    { otp: generatedOTP, is_otp_valid: true },
-    { where: { email_id: user.email_id } }
-  );
-  return true;
-};
-
-const verifyOTP = async (email, otp) => {
-  if (!email || !otp) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "|=> Please Enter Required Fields : [email_id, otp] <=|"
-    );
-  }
-
-  const user = await Admin.findOne({ where: { email_id: email } });
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "|=> Invalid Email <=|");
-  }
-
-  if (otp !== user.otp) {
-    throw new ApiError(httpStatus.NOT_FOUND, "|=> Invalid OTP Entered <=|");
-  }
-
-  let isUpdate = await Admin.update(
-    {
-      is_otp_valid: false,
-    },
-    {
-      where: { email_id: user.email_id },
-    }
-  );
-  return isUpdate;
-};
-
-const forgotAdminPassword = async (reqBody) => {
-  const { email, password, confirm_password } = reqBody;
-
-  const user = await Admin.findOne({ where: { email_id: email } });
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "|=> Invalid Email <=|");
-  }
-
-  if (password !== confirm_password) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "|=> New Password and Confirm Password Must Be Equal <=|"
     );
   }
 
@@ -381,7 +280,7 @@ const deleteUser = async (reqBody) => {
   return userDoc;
 };
 
-const adminAddUser = async (name, email, id, payment_status) => {
+const adminAddUser = async (name, email, id) => {
   // Check if the email already exists in the User table
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) {
@@ -397,7 +296,6 @@ const adminAddUser = async (name, email, id, payment_status) => {
     name,
     email,
     password: bcrypt.hashSync(password, salt),
-    payment_status: payment_status,
     created_by: id,
   });
 
@@ -508,8 +406,6 @@ const getUserCountByMonth = async (inputYear) => {
       userCount: userCountByMonthMap[month] || 0,
     }));
 
-    console.log(response);
-
     return response;
   } catch (error) {
     console.error(error);
@@ -565,21 +461,6 @@ const getMostLikedStory = async () => {
     console.error("Error getting most likes story:", error);
     throw error;
   }
-};
-
-const getLoginLogs = async () => {
-  const loginLogs = await UserToken.findAll({
-    include: [
-      {
-        model: User,
-        as: "token_user",
-        attributes: ["id", "name"],
-        where: { is_active: true },
-      },
-    ],
-  });
-  loginLogs.sort((a, b) => b.created_at - a.created_at);
-  return loginLogs;
 };
 
 const updatePaymentStatus = async (reqBody) => {
@@ -650,9 +531,6 @@ module.exports = {
   createAdminUser,
   loginAdminUser,
   resetAdminPassword,
-  sendOTP,
-  verifyOTP,
-  forgotAdminPassword,
   updateAdmin,
   deleteAdmin,
   getAllUsers,
@@ -668,7 +546,6 @@ module.exports = {
   getCategoryCount,
   getMostViewedStory,
   getMostLikedStory,
-  getLoginLogs,
   updatePaymentStatus,
   getLoginLogsOfUser,
 };

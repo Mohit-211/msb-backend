@@ -1,26 +1,6 @@
-const { getEmbedding, cosineSimilarity } = require('./utils.js');
 const openai = require('../../config/openAi.js')
-const fs = require('fs')
-const path = require('path')
 
 async function generateStoryFromTitle(userTitle) {
-  const inputEmbedding = await getEmbedding(userTitle);
-  const embeddedStories = JSON.parse(fs.readFileSync(path.join(__dirname, './embeddedStories.json'), 'utf-8'));
-  const topMatches = embeddedStories
-    .map(story => ({
-      ...story,
-      score: cosineSimilarity(inputEmbedding, story.embedding)
-    }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-
-  const context = topMatches
-    .map((s, i) => `Context ${i + 1} - "${s.title}":\n${s.content}`)
-    .join('\n\n');
-
-    // - Use context below to stay grounded.
-    // Context:\n${context}
-
   const messages = [
     {
       role: "system",

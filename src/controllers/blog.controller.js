@@ -3,7 +3,6 @@ const httpStatus = require("http-status");
 const catchAsync = require("../utils/catchAsync");
 const { blogService } = require("../services");
 const pick = require("../utils/pick");
-const config = require("../config/config");
 const responseWrapper = require("../config/responseWrapper");
 
 const createBlog = catchAsync(async (req, res) => {
@@ -49,33 +48,8 @@ const deleteBlog = catchAsync(async (req, res) => {
 
 const likeAndDislikeBlog = catchAsync(async (req, res) => {
   const body = pick(req.body, ["blog_id", "user"]);
-  const response = await blogService.likeAndDislikeBlog(body, req.io);
+  const response = await blogService.likeAndDislikeBlog(body);
   return responseWrapper(res, "", response, httpStatus.OK);
-});
-
-const getAllUserLikedPostByBlogId = catchAsync(async (req, res) => {
-const body = pick(req.body, ["user"]);
-  const query = pick(req.query, ["sortBy", "limit", "page"]);
-  const params = pick(req.params, ["blog_id"]);
-
-  if (!query["limit"]) {
-    query["limit"] = config.defaultLimit;
-  }
-  if (!query["page"]) {
-    query["page"] = 1;
-  }
-  if (!query["sortBy"] || query["sortBy"] === "") {
-    query["sortBy"] = "ASC";
-  }
-  let offset = (query["page"] - 1) * query["limit"];
-  query["offset"] = offset;
-
-  const response = await blogService.getAllUserLikedPostByBlogId(
-    body,
-    query,
-    params
-  );
-  return responseWrapper(res, response, "", httpStatus.OK);
 });
 
 const getLikesCountAndUserLikeStatus = catchAsync(async (req, res) => {
@@ -107,32 +81,9 @@ const getAllLikesByBlogId = catchAsync(async (req, res) => {
   return responseWrapper(res, response, "", httpStatus.OK);
 });
 
-const getCommentByUserId = catchAsync(async (req, res) => {
-  const response = await blogService.getCommentByUserId(req.body);
-  return responseWrapper(res, response, "", httpStatus.OK);
-});
-
-const updateComment = catchAsync(async (req, res) => {
-  const body = pick(req.body, ["blog_id", "comment", "user"]);
-  const response = await blogService.updateComment(body, req.files);
-  return responseWrapper(res, response, "comment Updated Successfully");
-});
-
-const deleteCommentByUser = catchAsync(async (req, res) => {
-  await blogService.deleteCommentByUser(req.body);
-  return responseWrapper(res, "", "Comment Deleted.", httpStatus.OK);
-});
-
 //for Admin
 const getCommentsByBlogId = catchAsync(async (req, res) => {
   const response = await blogService.getCommentsByBlogId(req.query.blog_id);
-  return responseWrapper(res, response, "", httpStatus.OK);
-});
-
-const getCommentByCommentId = catchAsync(async (req, res) => {
-  const response = await blogService.getCommentByCommentId(
-    req.query.comment_id
-  );
   return responseWrapper(res, response, "", httpStatus.OK);
 });
 
@@ -151,12 +102,7 @@ module.exports = {
   createCommenetInBlog,
   getAllCommentsByBlogId,
   getAllLikesByBlogId,
-  getAllUserLikedPostByBlogId,
   getLikesCountAndUserLikeStatus,
-  updateComment,
-  deleteCommentByUser,
-  getCommentByCommentId,
-  getCommentByUserId,
   deleteCommentByAdmin,
   getCommentsByBlogId,
 };

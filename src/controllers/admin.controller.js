@@ -1,18 +1,9 @@
 const httpStatus = require("http-status");
 
-const { Admin } = require("../models");
 const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
 const { adminService } = require("../services");
 const responseWrapper = require("../config/responseWrapper");
-
-// const createAdminUser = catchAsync(async (req, res) => {
-//   const user = await adminService.createAdminUser(req.body);
-//   res.status(httpStatus.CREATED).send({
-//     code: httpStatus.CREATED,
-//     data: { message: "|=> User Created Successfully <=|" },
-//   });
-// });
 
 const createAdminUser = catchAsync(async (req, res) => {
   const user = await adminService.createAdminUser(req.body);
@@ -55,32 +46,6 @@ const loginAdminUser = catchAsync(async (req, res) => {
 
 const resetAdminPassword = catchAsync(async (req, res) => {
   const response = await adminService.resetAdminPassword(req.body);
-  res.status(httpStatus.OK).send({ code: httpStatus.OK, data: response });
-});
-
-const sendOTP = catchAsync(async (req, res) => {
-  await adminService.sendOTP(req.body.email);
-  res.status(httpStatus.OK).send({
-    code: httpStatus.OK,
-    message: "|=> OTP has been Sent To Your Email <=|",
-  });
-});
-
-const verifyOTP = catchAsync(async (req, res) => {
-  const status = await adminService.verifyOTP(req.body.email, req.body.otp);
-  if (!status) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "|=>  Ineternal Server Error <=|"
-    );
-  }
-  res
-    .status(httpStatus.OK)
-    .send({ code: httpStatus.OK, message: "|=> OTP has been verified <=|" });
-});
-
-const forgotAdminPassword = catchAsync(async (req, res) => {
-  const response = await adminService.forgotAdminPassword(req.body);
   res.status(httpStatus.OK).send({ code: httpStatus.OK, data: response });
 });
 
@@ -207,15 +172,6 @@ const getMostLikedStory = catchAsync(async (req, res) => {
   });
 });
 
-const getLoginLogs = catchAsync(async (req, res) => {
-  const user = await adminService.getLoginLogs();
-  res.status(httpStatus.OK).send({
-    code: httpStatus.OK,
-    message: user ? "Success" : "Failed",
-    data: user,
-  });
-});
-
 //update organization status
 const updatePaymentStatus = catchAsync(async (req, res) => {
   let paymentStatus = await adminService.updatePaymentStatus(req.body);
@@ -245,9 +201,6 @@ module.exports = {
   createAdminUser,
   loginAdminUser,
   resetAdminPassword,
-  sendOTP,
-  verifyOTP,
-  forgotAdminPassword,
   updateAdmin,
   deleteAdmin,
   getAllUsers,
@@ -263,7 +216,6 @@ module.exports = {
   getCategoryCount,
   getMostViewedStory,
   getMostLikedStory,
-  getLoginLogs,
   updatePaymentStatus,
   getLoginLogsOfUser
 };

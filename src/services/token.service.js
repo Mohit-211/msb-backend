@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken')
 const moment = require('moment')
 const config = require('../config/config');
 
-const { UserToken } = require('../models');
 const  tokenTypes  = require('../config/tokens');
 const { QueryTypes } = require('sequelize');
 const  sequelize  = require('../config/central.db');
@@ -40,33 +39,7 @@ const saveLoginTiming = async (token, userId) => {
     return tokenDoc;
   };
 
-const verifyToken = async (token, type) => {
-
-    const payload = jwt.verify(token, config.jwt.secret);
-    if (!payload) {
-        throw new Error('Invalid Token');
-    };
-    const tokenDoc = await UserToken.findOne({
-        where: {
-            token: token,
-            token_type: type,
-            user_id: payload.sub,
-        }
-    });
-    if (!tokenDoc) {
-        throw new Error('Token not found');
-    };
-    if (tokenDoc.expired_at < new Date()) {
-        throw new Error('Token is Expired !! Please Log in..');
-    };
-    return tokenDoc;
-};
-
 const generateAuthTokens = async (user) => {
-
-    // if (user) {
-    //     await UserToken.update({ is_active: false }, { where: { user_id: user.id } });
-    // };
 
     const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'days');
     const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS);
@@ -91,8 +64,5 @@ const generateAuthTokens = async (user) => {
 };
 
 module.exports = {
-    generateToken,
-    saveToken,
-    verifyToken,
     generateAuthTokens
 };

@@ -1,6 +1,5 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
-const openai = require('../config/openAi')
 const slugify = require("slugify");
 const { AiStory } = require("../models");
 const { generateStoryFromTitle, generateShortStory } = require('../utils/rag-story-generator/generator')
@@ -20,9 +19,8 @@ const generateNewStory = async (body) => {
         heading: input,
     };
 
-    try { 
-        // let story = await storyGenerateText(input);   // Manual Prompt
-        let story = await generateStoryFromTitle(input)  // Embeded
+    try {
+        let story = await generateStoryFromTitle(input)
         if (!story) {
             throw new ApiError(
                 httpStatus.INTERNAL_SERVER_ERROR,
@@ -41,50 +39,6 @@ const generateNewStory = async (body) => {
         );
     }
 };
-
-async function storyGenerateText(input) {
-    try {
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                {
-                    role: "system",
-                    content: `
-                You are a story writer AI that creates real-world story (not fantasy) **realistic, grounded short stories** (250-350 words) based on **story titles only**.
-                
-                Instructions:
-                - Only generate a story if the input is a valid **real-world title or scenario**.
-                - If the input is a **question**, general topic, or irrelevant sentence (like "How do you project Indian economy?"), you should respond: 
-                  "**I am a story writer AI. Please give a valid story title, not a question or topic.**"
-                - Stories must be **set in realistic modern-day contexts** (no fantasy or fictional creatures).
-                - Avoid casual greetings or dialogues like “Hi,” “Hello,” “How are you?”
-                `.trim()
-                },
-                {
-                    role: "user",
-                    content: input, // the title-only input like "Girl opens a cafe in Manali"
-                },
-            ],
-            temperature: 0.8,
-            max_tokens: 900,
-        });
-
-        const sanitizedStory = sanitizeText(completion.choices[0].message.content);
-        return sanitizedStory;
-
-    } catch (err) {
-        console.log(err);
-        return null;
-    }
-}
-
-function sanitizeText(text) {
-    return text
-        .split("\n")
-        .filter(line => line.trim() !== "")
-        .map(line => `<p>${line}</p>`)
-        .join("");
-}
 
 const getStoryHistory = async (body) => {
     const { user } = body;
@@ -146,7 +100,7 @@ const saveStory = async (body) => {
 };
 
 const generateSortStory = async (body) => {
-    const { user, input, description, title } = body;
+    const { input, description, title } = body;
     if (!description || !input || !title) {
         throw new ApiError(
             httpStatus.BAD_REQUEST,

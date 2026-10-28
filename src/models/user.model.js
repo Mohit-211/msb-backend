@@ -109,18 +109,6 @@ User.init(
   }
 );
 
-User.isEmailTaken = async function (email) {
-  let u = await this.findOne({ where: { email: email.toLowerCase() } });
-  return u;
-};
-
-User.isUserNameTaken = async function (user_name) {
-  let u_n = await this.findOne({
-    where: { user_name: user_name, is_active: true },
-  });
-  return !!u_n;
-};
-
 User.beforeUpdate(async (User) => {
   User.updated_at = new Date()
     .toISOString()
