@@ -2,10 +2,13 @@ const path = require("path");
 const Joi = require("joi");
 
 // Node's built-in .env loader. Like dotenv, it keeps variables that are already set (e.g. by PM2).
-try {
-  process.loadEnvFile(path.join(__dirname, "../../.env"));
-} catch (error) {
-  if (error.code !== "ENOENT") throw error;
+// Tests set their own environment, so they never pick up a developer's .env.
+if (process.env.NODE_ENV !== "test") {
+  try {
+    process.loadEnvFile(path.join(__dirname, "../../.env"));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
 }
 
 const envVarsSchema = Joi.object({
@@ -37,6 +40,9 @@ const envVarsSchema = Joi.object({
 
   // Application
   DEFAULT_API_DATA_LIMIT: Joi.number().default(15),
+
+  // Days a new user can read paid stories and save AI stories before they need a paid plan.
+  TRIAL_DAYS: Joi.number().integer().min(0).default(3),
 
   ACCESSDOMAINS: Joi.string().required(),
 
@@ -103,6 +109,8 @@ module.exports = {
   accessDomains: envVars.ACCESSDOMAINS,
 
   defaultLimit: envVars.DEFAULT_API_DATA_LIMIT,
+
+  trialDays: envVars.TRIAL_DAYS,
 
   OPENAI_KEY: envVars.OPENAI_KEY,
 

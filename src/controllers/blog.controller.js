@@ -11,7 +11,7 @@ const createBlog = async (req, res) => {
 };
 
 const getAllBlogs = async (req, res) => {
-  const blogs = await blogService.getAllBlogs();
+  const blogs = await blogService.getAllBlogs(req.query);
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: blogs ? "Successfully Get all Blogs" : "Failed",

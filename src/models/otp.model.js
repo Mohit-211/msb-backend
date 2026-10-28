@@ -66,10 +66,10 @@ OTP.beforeValidate(async (OTP) => {
 });
 
 OTP.beforeUpdate(async (OTP) => {
-    OTP.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
+    OTP.updated_at = new Date();
 });
 OTP.beforeDestroy(async (OTP) => {
-    OTP.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
+    OTP.deleted_at = new Date();
     OTP.is_active = false;
 });
 

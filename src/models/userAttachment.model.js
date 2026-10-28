@@ -64,11 +64,11 @@ UserAttachment.init({
 })
 
 UserAttachment.beforeUpdate(async (UserAttachment) => {
-    UserAttachment.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
+    UserAttachment.updated_at = new Date();
 });
 
 UserAttachment.beforeDestroy(async (UserAttachment) => {
-    UserAttachment.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
+    UserAttachment.deleted_at = new Date();
     UserAttachment.is_active = false;
 });
 

@@ -64,17 +64,11 @@ BlogCategory.init(
 );
 
 BlogCategory.beforeUpdate((BlogCategory) => {
-  BlogCategory.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogCategory.updated_at = new Date();
 });
 
 BlogCategory.beforeDestroy((BlogCategory) => {
-  BlogCategory.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogCategory.deleted_at = new Date();
   BlogCategory.is_active = false;
 });
 

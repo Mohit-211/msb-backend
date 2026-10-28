@@ -10,9 +10,10 @@ router.get('/profile', userAuth, userController.getProfile);
 
 router.put('/updateProfile', userAuth, userController.updateUserProfile);
 
-router.post('/get-blog-from-category',userController.getBlogFromCategory);
+// Reading stories needs a signed-in user. Paid stories come back as locked teasers unless their plan includes them.
+router.post('/get-blog-from-category', userAuth, userController.getBlogFromCategory);
 
-router.get('/blog/search',userController.searchBlogByCategoryNameOrBlogHeadings)
+router.get('/blog/search', userAuth, userController.searchBlogByCategoryNameOrBlogHeadings)
 
 router.post('/markBlogAsViewed', userAuth, userController.markBlogAsViewed);
 

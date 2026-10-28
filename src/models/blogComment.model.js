@@ -59,17 +59,11 @@ BlogComment.init(
 );
 
 BlogComment.beforeUpdate((BlogComment) => {
-  BlogComment.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogComment.updated_at = new Date();
 });
 
 BlogComment.beforeDestroy((BlogComment) => {
-  BlogComment.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogComment.deleted_at = new Date();
   BlogComment.is_active = false;
 });
 

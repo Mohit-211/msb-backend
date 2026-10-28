@@ -21,6 +21,9 @@ router.get('/getAllLikesByBlogId', adminAuth, blogController.getAllLikesByBlogId
 router.get('/getCommentsByBlogId', adminAuth, blogController.getCommentsByBlogId)
 router.delete('/deleteCommentByAdmin', adminAuth, blogController.deleteCommentByAdmin)
 
-router.post('/:blog_id', userController.getBlogById);
+// Needs a signed-in user, whose plan decides whether a paid story opens. GET is the one to use; POST stays for the current site.
+// Last, so it doesn't catch the named paths above.
+router.get('/:blog_id', userAuth, userController.getBlogById);
+router.post('/:blog_id', userAuth, userController.getBlogById);
 
 module.exports = router;

@@ -1,9 +1,29 @@
 const { status: httpStatus } = require("http-status");
 
-const { Role } = require("../models");
+const { Admin, Role } = require("../models");
+const Roles = require("../config/roles");
 const ApiError = require("../utils/ApiError");
 
+// The role named ADMIN grants full access, including managing admins, roles and customers.
+const isSuperAdminRole = (role) => role?.name === Roles.ADM;
+
+// Renaming or deleting the ADMIN role would lock every admin out, and a second ADMIN role would grant
+// full access to whoever is given it.
+const protectSuperAdminRole = (roleDoc, newName) => {
+  if (isSuperAdminRole(roleDoc)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "The ADMIN role can't be renamed or deleted.");
+  }
+  if (typeof newName === "string" && newName.trim().toUpperCase() === Roles.ADM) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "There can only be one ADMIN role.");
+  }
+};
+
 const createRole = async (reqBody) => {
+  if (!reqBody.name || !reqBody.abbreviation) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Name and Abbreviation both needed.");
+  }
+  protectSuperAdminRole(null, reqBody.name);
+
   const roleObj = {
     name: reqBody.name,
     abbreviation: reqBody.abbreviation,
@@ -26,6 +46,7 @@ const updateRole = async (reqBody) => {
   if (!roleDoc) {
     throw new ApiError(httpStatus.NOT_FOUND, "Role not found");
   }
+  protectSuperAdminRole(roleDoc, reqBody.name);
   if (
     reqBody.name &&
     typeof reqBody.name !== "undefined" &&
@@ -79,11 +100,16 @@ const deleteRole = async (reqBody) => {
   if (!roleDoc) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
   }
+  protectSuperAdminRole(roleDoc);
+  if (await Admin.count({ where: { role_id: roleDoc.id } })) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Move this role's admins to another role first.");
+  }
   await Role.destroy({ where: { id: reqBody.role_id, is_active: true } });
   return roleDoc;
 };
 
 module.exports = {
+  isSuperAdminRole,
   findRoleById,
   createRole,
   getAllRoles,

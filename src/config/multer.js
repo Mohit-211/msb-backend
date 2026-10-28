@@ -9,6 +9,13 @@ const ApiError = require('../utils/ApiError');
 // Per file. Large enough for the blog and section videos.
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
+// The types each field accepts, and the extension each is saved with. The browser's file name isn't used,
+// so a compressed image uploaded as "blob" still works. SVG stays out because it can carry script.
+const ALLOWED_TYPES = {
+    images: { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' },
+    videos: { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' },
+};
+
 // Set storage engine
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -21,7 +28,7 @@ const storage = multer.diskStorage({
         }
     },
     filename: function (req, file, cb) {
-        const ext = file.mimetype.split("/")[1];
+        const ext = ALLOWED_TYPES[file.fieldname][file.mimetype];
         // The random part keeps names unguessable and stops files saved in the same millisecond from overwriting each other.
         cb(null, `${file.fieldname}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`);
     }
@@ -29,15 +36,10 @@ const storage = multer.diskStorage({
 
 // Check file type
 function checkFileType(file, cb) {
-    const filetypes = /jpeg|jpg|png|gif|mp4|mov/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
-
-    if (mimetype && extname) {
+    if (ALLOWED_TYPES[file.fieldname]?.[file.mimetype]) {
         return cb(null, true);
-    } else {
-        cb(new ApiError(httpStatus.BAD_REQUEST, 'Only images and videos can be uploaded.'));
     }
+    cb(new ApiError(httpStatus.BAD_REQUEST, 'Images must be JPEG, PNG, GIF or WebP, and videos MP4, WebM or MOV.'));
 }
 
 const parseUpload = multer({

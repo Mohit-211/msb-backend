@@ -55,17 +55,11 @@ BlogViews.init(
 );
 
 BlogViews.beforeUpdate((BlogViews) => {
-  BlogViews.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogViews.updated_at = new Date();
 });
 
 BlogViews.beforeDestroy((BlogViews) => {
-  BlogViews.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogViews.deleted_at = new Date();
   BlogViews.is_active = false;
 });
 

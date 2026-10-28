@@ -56,17 +56,11 @@ BannerContent.init(
 );
 
 BannerContent.beforeUpdate((BannerContent) => {
-  BannerContent.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BannerContent.updated_at = new Date();
 });
 
 BannerContent.beforeDestroy((BannerContent) => {
-  BannerContent.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BannerContent.deleted_at = new Date();
   BannerContent.is_active = false;
 });
 

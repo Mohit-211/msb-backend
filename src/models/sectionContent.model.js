@@ -60,17 +60,11 @@ SectionContent.init(
 );
 
 SectionContent.beforeUpdate((SectionContent) => {
-  SectionContent.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  SectionContent.updated_at = new Date();
 });
 
 SectionContent.beforeDestroy((SectionContent) => {
-  SectionContent.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  SectionContent.deleted_at = new Date();
   SectionContent.is_active = false;
 });
 

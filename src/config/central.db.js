@@ -1,16 +1,19 @@
 const { Sequelize } = require('sequelize');
 const config = require('./config.js');
+const logger = require('./logger.js');
 
 // db connection option
 const sequelizeOptions = {
     host: config.databases.central.host,
+    port: config.databases.central.port,
     dialect: 'mysql',
     pool: {
         max: 10,
         min: 0,
         idle: 10000,
     },
-    logging: config.env === 'production' ? false : console.log
+    // SQL shows at debug level, so only in development.
+    logging: config.env === 'production' ? false : (sql) => logger.debug(sql)
 };
 
 //create connection object
@@ -22,10 +25,9 @@ const sequelize = new Sequelize(
 );
 
 sequelize.authenticate()
-    .then(() => console.log('Connection has been established successfully.'))
-    .catch((error) => console.log('Unable to connect to the database:', error));
+    .then(() => logger.info('Connection has been established successfully.'))
+    .catch((error) => logger.error(`Unable to connect to the database: ${error.message}`));
 
 
 // export connection object
 module.exports = sequelize;
-

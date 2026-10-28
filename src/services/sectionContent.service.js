@@ -1,11 +1,13 @@
 const { status: httpStatus } = require("http-status");
 
 const ApiError = require("../utils/ApiError");
+const { sanitizeRichText, assertSafeUrl } = require("../utils/sanitizeHtml");
 const SectionContent = require("../models/sectionContent.model");
 
 const createSectionContent = async (reqBody, files) => {
+  assertSafeUrl(reqBody.redirection_url, "redirection_url");
   const contentObj = {
-    section_content: reqBody.section_content,
+    section_content: sanitizeRichText(reqBody.section_content),
     redirection_url: reqBody.redirection_url,
   };
 
@@ -73,12 +75,13 @@ const updateSectionContent = async (reqBody, files) => {
   if (!contentDoc) {
     throw new ApiError(httpStatus.NOT_FOUND, "Content not found");
   }
+  assertSafeUrl(reqBody.redirection_url, "redirection_url");
   if (
     reqBody.section_content &&
     reqBody.section_content !== "" &&
     typeof reqBody.section_content !== "undefined"
   ) {
-    contentDoc["section_content"] = reqBody.section_content;
+    contentDoc["section_content"] = sanitizeRichText(reqBody.section_content);
   }
   if (
     reqBody.redirection_url &&

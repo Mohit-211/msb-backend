@@ -15,4 +15,7 @@ router.get('/getAllGeneratedStories', adminAuth, adminStoryController.getAllGene
 router.get('/getStoryById/:id', adminAuth, adminStoryController.getStoryById);
 router.post('/makeGeneratedStoryLive/:id', adminAuth, adminStoryController.makeGeneratedStoryLive);
 
+// Last, so it doesn't catch the admin paths above.
+router.get('/:id', userAuth, storyGenerateController.getSavedStory);
+
 module.exports = router;

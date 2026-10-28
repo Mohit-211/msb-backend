@@ -21,6 +21,11 @@ const findCategoryById = async (req, res) => {
     return responseWrapper(res, categoryDoc, '');
 };
 
+const findCategoryBySlug = async (req, res) => {
+    const categoryDoc = await categoryService.findCategoryBySlug(req.query.slug);
+    return responseWrapper(res, categoryDoc, '');
+};
+
 const getAllCategorys = async (req, res) => {
 
     const categoryDocs = await categoryService.getAllCategorys();
@@ -36,6 +41,7 @@ const deleteCategory = async (req, res) => {
 module.exports = {
     createCategory,
     findCategoryById,
+    findCategoryBySlug,
     getAllCategorys,
     updateCategory,
     deleteCategory

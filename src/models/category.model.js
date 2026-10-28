@@ -62,17 +62,11 @@ Category.beforeValidate((Category) => {
 });
 
 Category.beforeUpdate((Category) => {
-  Category.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  Category.updated_at = new Date();
 });
 
 Category.beforeDestroy((Category) => {
-  Category.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  Category.deleted_at = new Date();
   Category.is_active = false;
 });
 

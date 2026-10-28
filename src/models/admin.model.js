@@ -89,16 +89,10 @@ Admin.isEmailTaken = async function (email_id) {
   return !!u;
 };
 Admin.beforeUpdate(async (Admin) => {
-  Admin.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  Admin.updated_at = new Date();
 });
 Admin.beforeDestroy(async (Admin) => {
-  Admin.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  Admin.deleted_at = new Date();
 });
 
 module.exports = Admin;

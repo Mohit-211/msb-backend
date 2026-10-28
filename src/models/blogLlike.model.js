@@ -1,6 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
 const sequelize = require("../config/central.db");
-const Blog = require("./blog.model");
 
 class BlogLike extends Model {}
 BlogLike.init(
@@ -55,33 +54,12 @@ BlogLike.init(
   }
 );
 
-BlogLike.afterCreate(async (blogLike) => {
-  try {
-    const blog = await Blog.findByPk(blogLike.blog_id);
-    if (blogLike.is_active) {
-      blog.likes_count++;
-    } else {
-      blog.likes_count--;
-    }
-    await blog.save();
-  } catch (error) {
-    console.error("Error updating like count in Blog:", error);
-    throw error;
-  }
-});
-
 BlogLike.beforeUpdate((BlogLike) => {
-  BlogLike.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogLike.updated_at = new Date();
 });
 
 BlogLike.beforeDestroy((BlogLike) => {
-  BlogLike.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogLike.deleted_at = new Date();
   BlogLike.is_active = false;
 });
 

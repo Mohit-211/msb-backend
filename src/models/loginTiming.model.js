@@ -58,17 +58,11 @@ LoginTiming.init(
 );
 
 LoginTiming.beforeUpdate(async (LoginTiming) => {
-  LoginTiming.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  LoginTiming.updated_at = new Date();
 });
 
 LoginTiming.beforeDestroy(async (LoginTiming) => {
-  LoginTiming.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  LoginTiming.deleted_at = new Date();
 });
 
 module.exports = LoginTiming;

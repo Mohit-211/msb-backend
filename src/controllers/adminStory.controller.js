@@ -4,7 +4,7 @@ const responseWrapper = require("../config/responseWrapper");
 const { adminStoryService } = require("../services");
 
 const getAllGeneratedStories = async (req, res) => {
-	let result = await adminStoryService.getAllGeneratedStories();
+	let result = await adminStoryService.getAllGeneratedStories(req.query);
 	responseWrapper(res, result);
 };
 

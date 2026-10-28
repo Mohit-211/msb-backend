@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 
 const { Admin } = require("../models");
 const validateEmail = require("../helpers/validateEmail");
+const validatePassword = require("../helpers/validatePassword");
 const ApiError = require("../utils/ApiError");
 
 const { roleService } = require("../services");
@@ -95,6 +96,14 @@ const validateResetPassordBody = async (req, res, next) => {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       "|=> New Password and Confirm Password Must Be Equal <=|"
+    );
+  }
+
+  // The same policy users have.
+  if (!validatePassword(new_password)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "|=> Password should have a minimum length of 8 characters and must have at least 2 digits and No Blank Space <=|"
     );
   }
   next();

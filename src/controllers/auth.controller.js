@@ -5,6 +5,7 @@ const ApiError = require("../utils/ApiError");
 const { authService } = require("../services");
 const pick = require("../utils/pick");
 const responseWrapper = require("../config/responseWrapper");
+const logger = require("../config/logger");
 
 const sendOTP = async (req, res, next) => {
   const { email, type } = pick(req.body, ["email", "type"]);
@@ -16,15 +17,12 @@ const sendOTP = async (req, res, next) => {
     // Respond with success
     return responseWrapper(res, "", "OTP has been Sent To Your Email");
   } catch (error) {
-    // Handle errors
-    console.error("Error in sendOTP:", error);
-
     if (error instanceof ApiError) {
       // If it's an ApiError, send the error response
       return responseWrapper(res, error.code, error.message, error.statusCode);
     } else {
       // If it's not an ApiError, log the error and send a generic error response
-      console.error(error);
+      logger.error(error);
       return responseWrapper(
         res,
         "INTERNAL_SERVER_ERROR",
@@ -48,7 +46,7 @@ const login = async (req, res) => {
       statusCode = error.statusCode;
       message = error.message;
     } else {
-      console.error(error);
+      logger.error(error);
     }
 
     return responseWrapper(res, null, message, statusCode);
@@ -87,7 +85,7 @@ const resetPassword = async (req, res) => {
       return responseWrapper(res, "", error.message, error.statusCode);
     } else {
       // Handle other unexpected errors
-      console.error(error);
+      logger.error(error);
       return responseWrapper(
         res,
         "",
@@ -103,7 +101,8 @@ const forgotPassword = async (req, res) => {
     req.body.email,
     req.body.otp,
     req.body.password,
-    req.body.confirm_Password
+    // Every other endpoint spells it confirm_password; the website sends confirm_Password here.
+    req.body.confirm_password ?? req.body.confirm_Password
   );
   if (!status) {
     throw new ApiError(

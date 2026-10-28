@@ -7,23 +7,13 @@ const tokenTypes = require("../config/tokens");
 const config = require("../config/config");
 const responseWrapper = require("../config/responseWrapper");
 
-const verifyAuthJWTToken = async (req, res, next) => {
-  const token = req.headers["x-access-token"];
-
-  if (!token) {
-    return responseWrapper(
-      res,
-      "",
-      "Please authenticate",
-      httpStatus.UNAUTHORIZED
-    );
-  }
-
+// Finds the user a token belongs to. A failure comes back as [status, message] for verifyAuthJWTToken to send.
+const resolveUserToken = async (token) => {
   let payload;
   try {
     payload = jwt.verify(token, config.jwt.secret, { algorithms: ["HS256"] });
   } catch (err) {
-    return responseWrapper(res, "", "Invalid Token", httpStatus.UNAUTHORIZED);
+    return { error: [httpStatus.UNAUTHORIZED, "Invalid Token"] };
   }
 
   const tokenDoc = await UserToken.findOne({
@@ -36,14 +26,34 @@ const verifyAuthJWTToken = async (req, res, next) => {
   });
 
   if (!tokenDoc) {
-    return responseWrapper(res, "", "Token Not Found", httpStatus.BAD_REQUEST);
+    return { error: [httpStatus.BAD_REQUEST, "Token Not Found"] };
   }
 
   const user = await User.findOne({
     where: { id: tokenDoc.user_id, is_active: 1 },
   });
   if (!user) {
-    return responseWrapper(res, "", "User Not Found", httpStatus.NOT_FOUND);
+    return { error: [httpStatus.NOT_FOUND, "User Not Found"] };
+  }
+
+  return { user };
+};
+
+const verifyAuthJWTToken = async (req, res, next) => {
+  const token = req.headers["x-access-token"];
+
+  if (!token) {
+    return responseWrapper(
+      res,
+      "",
+      "Please authenticate",
+      httpStatus.UNAUTHORIZED
+    );
+  }
+
+  const { user, error } = await resolveUserToken(token);
+  if (error) {
+    return responseWrapper(res, "", error[1], error[0]);
   }
 
   req.body.user = user;
@@ -61,13 +71,6 @@ const validateNewBlogBody = async (req, res, next) => {
       httpStatus.BAD_REQUEST
     );
   }
-
-  // Validate categories
-  const categoryNames = categories
-    .split(",")
-    .map((categoryName) => categoryName.trim());
-
-  req.body.categories = categoryNames;
 
   next();
 };

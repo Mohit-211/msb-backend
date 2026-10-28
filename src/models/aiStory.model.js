@@ -93,17 +93,11 @@ AiStory.beforeValidate((AiStory) => {
 });
 
 AiStory.beforeUpdate((AiStory) => {
-  AiStory.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  AiStory.updated_at = new Date();
 });
 
 AiStory.beforeDestroy((AiStory) => {
-  AiStory.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  AiStory.deleted_at = new Date();
   AiStory.is_active = false;
 });
 

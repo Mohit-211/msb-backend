@@ -3,6 +3,7 @@ const { status: httpStatus } = require("http-status");
 const ApiError = require("../utils/ApiError");
 const { adminService } = require("../services");
 const responseWrapper = require("../config/responseWrapper");
+const logger = require("../config/logger");
 
 const createAdminUser = async (req, res) => {
   const user = await adminService.createAdminUser(req.body);
@@ -34,7 +35,7 @@ const loginAdminUser = async (req, res) => {
       });
     } else {
       // Handle other unexpected errors
-      console.error(error);
+      logger.error(error);
       res.status(httpStatus.INTERNAL_SERVER_ERROR).send({
         code: httpStatus.INTERNAL_SERVER_ERROR,
         message: "Internal Server Error",
@@ -79,7 +80,7 @@ const getAllAdmins = async (req, res) => {
 //=======================================USER APIS=========================================
 
 const getAllUsers = async (req, res) => {
-  const users = await adminService.getAllUsers();
+  const users = await adminService.getAllUsers(req.query);
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: users ? "Success" : "Failed",
@@ -107,6 +108,7 @@ const adminAddUser = async (req, res) => {
     req.body.name,
     req.body.email,
     req.body.user.id,
+    req.body.payment_status,
   );
   if (!users) {
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Unable to add users");
@@ -114,7 +116,7 @@ const adminAddUser = async (req, res) => {
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: "New User Created Successfully.",
-    data: "users",
+    data: users,
   });
 };
 
@@ -182,6 +184,29 @@ const updatePaymentStatus = async (req, res) => {
   });
 };
 
+const updateUserStatus = async (req, res) => {
+  const user = await adminService.updateUserStatus(req.body);
+  res.status(httpStatus.OK).send({
+    code: httpStatus.OK,
+    data: user,
+    message: "Successfully updated user status",
+  });
+};
+
+const exportUsers = async (req, res) => {
+  const csv = await adminService.exportUsers();
+  res
+    .status(httpStatus.OK)
+    .type("text/csv; charset=utf-8")
+    .attachment(`customers-${new Date().toISOString().slice(0, 10)}.csv`)
+    .send(csv);
+};
+
+const getDashboardStats = async (req, res) => {
+  const stats = await adminService.getDashboardStats();
+  return responseWrapper(res, stats, "Success");
+};
+
 const getLoginLogsOfUser = async (req, res) => {
   const loginLogs = await adminService.getLoginLogsOfUser(req.body);
   if (!loginLogs) {
@@ -217,5 +242,8 @@ module.exports = {
   getMostViewedStory,
   getMostLikedStory,
   updatePaymentStatus,
+  updateUserStatus,
+  exportUsers,
+  getDashboardStats,
   getLoginLogsOfUser
 };

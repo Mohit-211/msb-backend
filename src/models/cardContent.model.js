@@ -47,17 +47,11 @@ CardContent.init(
 );
 
 CardContent.beforeUpdate((CardContent) => {
-  CardContent.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  CardContent.updated_at = new Date();
 });
 
 CardContent.beforeDestroy((CardContent) => {
-  CardContent.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  CardContent.deleted_at = new Date();
   CardContent.is_active = false;
 });
 

@@ -47,16 +47,10 @@ Role.init(
 );
 
 Role.beforeUpdate(async (Role) => {
-  Role.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  Role.updated_at = new Date();
 });
 Role.beforeDestroy(async (Role) => {
-  Role.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  Role.deleted_at = new Date();
 });
 
 module.exports = Role;

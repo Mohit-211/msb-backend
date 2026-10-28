@@ -47,17 +47,11 @@ SocialLogins.init(
 );
 
 SocialLogins.beforeUpdate((SocialLogins) => {
-  SocialLogins.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  SocialLogins.updated_at = new Date();
 });
 
 SocialLogins.beforeDestroy((SocialLogins) => {
-  SocialLogins.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  SocialLogins.deleted_at = new Date();
   SocialLogins.is_active = false;
 });
 

@@ -75,17 +75,11 @@ Blog.init(
 );
 
 Blog.beforeUpdate((Blog) => {
-  Blog.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  Blog.updated_at = new Date();
 });
 
 Blog.beforeDestroy((Blog) => {
-  Blog.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  Blog.deleted_at = new Date();
   Blog.is_active = false;
 });
 

@@ -2,7 +2,7 @@
   "name": "msb-backend",
   "version": "2.0.0",
   "private": true,
-  "description": "",
+  "description": "API for My Story Bank: stories, the AI story generator, and the admin panel",
   "main": "index.js",
   "engines": {
     "node": ">=24.0.0"
@@ -10,7 +10,12 @@
   "scripts": {
     "start": "pm2 start ecosystem.config.json --no-daemon",
     "staging": "pm2 start ecosystem.stagging-config.json --no-daemon",
-    "dev": "cross-env NODE_ENV=development node --watch index.js"
+    "dev": "cross-env NODE_ENV=development node --watch index.js",
+    "lint": "eslint .",
+    "test": "node test/run.js",
+    "sanitize:html": "node scripts/sanitize-stored-html.js",
+    "recount:counts": "node scripts/recount-story-counts.js",
+    "db:utf8mb4": "node scripts/convert-to-utf8mb4.js"
   },
   "author": "",
   "license": "ISC",
@@ -29,12 +34,17 @@
     "mysql2": "^3.24.6",
     "nodemailer": "^10.2.1",
     "openai": "^7.45.1",
+    "sanitize-html": "^2.18.1",
     "sequelize": "^6.37.8",
     "slugify": "^1.6.9",
     "winston": "^3.19.0"
   },
   "devDependencies": {
-    "cross-env": "^10.1.0"
+    "@eslint/js": "^10.0.1",
+    "cross-env": "^10.1.0",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "sqlite3": "^6.0.1"
   },
   "overrides": {
     "uuid": "^11.1.1"

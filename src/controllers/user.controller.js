@@ -2,6 +2,9 @@ const { status: httpStatus } = require("http-status");
 
 
 const { userService } = require("../services");
+const config = require("../config/config");
+const ApiError = require("../utils/ApiError");
+const pageOf = require("../helpers/pageOf");
 const pick = require("../utils/pick");
 const responseWrapper = require("../config/responseWrapper");
 
@@ -21,44 +24,25 @@ const updateUserProfile = async (req, res) => {
 };
 
 const getBlogById = async (req, res) => {
-  const response = await userService.getBlogById(req.params.blog_id);
+  const response = await userService.getBlogById(req.params.blog_id, req.body.user);
   return responseWrapper(res, response, "", httpStatus.OK);
 };
 
 const getBlogFromCategory = async (req, res) => {
   const body = pick(req.body, ["category_slug"]);
-  const query = pick(req.query, ["sortBy", "limit", "page"]);
-
-  if (!query["limit"]) {
-    query["limit"] = config.defaultLimit;
-  }
-  if (!query["page"]) {
-    query["page"] = 1;
-  }
-  if (!query["sortBy"] || query["sortBy"] === "") {
-    query["sortBy"] = "ASC";
-  }
-  let offset = (query["page"] - 1) * query["limit"];
-  query["offset"] = offset;
-  const response = await userService.getBlogFromCategory(body, query);
+  const query = {
+    sortBy: req.query.sortBy === "DESC" ? "DESC" : "ASC",
+    ...pageOf(req.query, config.defaultLimit),
+  };
+  const response = await userService.getBlogFromCategory(body, query, req.body.user);
   return responseWrapper(res, response, "Success", httpStatus.OK);
 };
 
 const searchBlogByCategoryNameOrBlogHeadings = async (req, res) => {
-  const query = pick(req.query, ["sortBy", "limit", "page", "query"]);
-  if (!query["limit"]) {
-    query["limit"] = 15;
-  }
-  if (!query["page"]) {
-    query["page"] = 1;
-  }
-  if (!query["sortBy"] || query["sortBy"] === "") {
-    query["sortBy"] = "ASC";
-  }
-  let offset = (query["page"] - 1) * query["limit"];
-  query["offset"] = offset;
+  const query = { query: req.query.query, ...pageOf(req.query, 15) };
   const response = await userService.searchBlogByCategoryNameOrBlogHeadings(
-    query
+    query,
+    req.body.user
   );
   return responseWrapper(res, response, "Success", httpStatus.OK);
 };

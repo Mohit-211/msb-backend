@@ -57,11 +57,11 @@ UserToken.init({
 });
 
 UserToken.beforeUpdate(async (UserToken) => {
-    UserToken.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
+    UserToken.updated_at = new Date();
 });
 
 UserToken.beforeDestroy(async (UserToken) => {
-    UserToken.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
+    UserToken.deleted_at = new Date();
     UserToken.is_active = false;
 });
 

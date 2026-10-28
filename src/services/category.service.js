@@ -11,6 +11,16 @@ const findCategoryById = async (id) => {
   return categoryDoc ? categoryDoc : {};
 };
 
+const findCategoryBySlug = async (slug) => {
+  const categoryDoc = typeof slug === "string" && slug !== ""
+    ? await Category.findOne({ where: { slug, is_active: true } })
+    : null;
+  if (!categoryDoc) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Category not found");
+  }
+  return categoryDoc;
+};
+
 const createCategory = async (reqBody,files) => {
   const existingCategory = await Category.findOne({
     where: {
@@ -118,6 +128,7 @@ const deleteCategory = async (reqBody) => {
 
 module.exports = {
   findCategoryById,
+  findCategoryBySlug,
   createCategory,
   updateCategory,
   getAllCategorys,

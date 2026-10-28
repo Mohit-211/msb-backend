@@ -11,6 +11,7 @@ const {
 } = require("../models");
 const tokenTypes = require("../config/tokens");
 const ApiError = require("../utils/ApiError");
+const { accessSummary } = require("../utils/access");
 const validatePassword = require("../helpers/validatePassword");
 const {
   sendForgotPasswordOTP,
@@ -73,6 +74,7 @@ const login = async (reqBody) => {
     name: user.name,
     email: user.email,
     payment_status: user.payment_status,
+    access: accessSummary(user),
     tokens: token,
   };
 
@@ -148,7 +150,9 @@ const forgotPassword = async (email, otp, password, confirm_Password) => {
     throw invalidOtpError();
   }
 
-  if (String(otp) !== otpDoc.code) {
+  // Codes are six digits. A client that parses the code as a number drops leading zeros, so put them back.
+  const code = String(otp).trim();
+  if ((/^\d{1,6}$/.test(code) ? code.padStart(6, "0") : code) !== otpDoc.code) {
     const attempts = (failedOtpAttempts.get(otpDoc.id) || 0) + 1;
     if (attempts >= MAX_OTP_ATTEMPTS) {
       failedOtpAttempts.delete(otpDoc.id);

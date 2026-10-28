@@ -117,16 +117,10 @@ User.init(
 );
 
 User.beforeUpdate(async (User) => {
-  User.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  User.updated_at = new Date();
 });
 User.beforeDestroy(async (User) => {
-  User.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  User.deleted_at = new Date();
   User.is_active = false;
 });
 

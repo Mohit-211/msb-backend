@@ -1,17 +1,44 @@
 const { status: httpStatus } = require("http-status");
 const { Op } = require("sequelize");
 
-const { User, UserAttachment, Blogs, BlogAttachment, Category, BlogViews } = require("../models");
+const {
+  User,
+  UserAttachment,
+  Blogs,
+  BlogAttachment,
+  BlogCategory,
+  Category,
+  BlogViews,
+} = require("../models");
+const {
+  accessSummary,
+  canReadStory,
+  presentStory,
+  LOCKED_STORY_MESSAGE,
+} = require("../utils/access");
 
 const ApiError = require("../utils/ApiError");
 
+// What story lists and search return with each story.
+const listIncludes = () => [
+  {
+    model: BlogAttachment,
+    as: "blog_attachment",
+    attributes: ["id", "file_type", "file_name", "file_uri"],
+  },
+  {
+    model: Category,
+    through: {
+      attributes: [],
+    },
+    attributes: ["id", "title", "slug"],
+  },
+];
 
 const getProfile = async (body) => {
   const { user } = body;
-  let result = "";
-
-  result = await User.findOne({
-    attributes: ["id", "name", "email", "mobile"],
+  const result = await User.findOne({
+    attributes: ["id", "name", "email", "mobile", "payment_status", "created_at"],
     include: [
       {
         model: UserAttachment,
@@ -26,7 +53,8 @@ const getProfile = async (body) => {
   if (!result)
     throw new ApiError(httpStatus.BAD_REQUEST, "Failed to Get Profile.");
 
-  return result;
+  // Lets the site show the trial or plan, and what it allows.
+  return { ...result.toJSON(), access: accessSummary(result) };
 };
 
 const updateUserProfile = async (body, files) => {
@@ -99,7 +127,8 @@ const updateUserProfile = async (body, files) => {
   return newUpdatedUserDoc;
 };
 
-const getBlogById = async (blog_id) => {
+// `viewer` is the signed-in user reading the story.
+const getBlogById = async (blog_id, viewer) => {
   const blogDoc = await Blogs.findOne({
     where: { id: blog_id, is_active: true },
     include: [
@@ -118,149 +147,102 @@ const getBlogById = async (blog_id) => {
     ],
   });
   if (!blogDoc)
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to Get This blog"
-    );
-  return blogDoc;
+    throw new ApiError(httpStatus.NOT_FOUND, "Story not found");
+  return presentStory(blogDoc, viewer);
 };
 
-const getBlogFromCategory = async (body, query) => {
+// Ids of the stories in a category, looked up by the category's current slug.
+const blogIdsInCategory = async (slug) => {
+  const category = await Category.findOne({ attributes: ["id"], where: { slug } });
+  if (!category) return [];
+  const links = await BlogCategory.findAll({
+    attributes: ["blog_id"],
+    where: { category_id: category.id },
+  });
+  return links.map((link) => link.blog_id);
+};
+
+const getBlogFromCategory = async (body, query, viewer) => {
   const { category_slug } = body;
   const { sortBy, limit, offset } = query;
 
-  if (category_slug && category_slug != "all") {
-    const blogDoc = await Blogs.findAndCountAll({
-      distinct:true,
-      where: {
-        [Op.and]: [
-          { is_active: true },
-          {
-            "$Categories.slug$": category_slug,
-          },
-        ],
-      },
-      include: [
-        {
-          model: BlogAttachment,
-          as: "blog_attachment",
-          attributes: ["id", "file_type", "file_name", "file_uri"],
-        },
-        {
-          model: Category,
-          through: {
-            attributes: [],
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-          },
-          attributes: ["id", "title", "slug"],
-        },
-      ],
-    });
-
-    if (!blogDoc)
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        "Failed to Get Blog from this category"
-      );
-    return blogDoc
-  } else if (category_slug === "all" || !category_slug) {
-    const allBlogs = await Blogs.findAndCountAll({
-      distinct:true,
-      include: [
-        {
-          model: BlogAttachment,
-          as: "blog_attachment",
-          attributes: ["id", "file_type", "file_name", "file_uri"],
-        },
-        {
-          model: Category,
-          through: {
-            attributes: [],
-          },
-          attributes: ["id", "title", "slug"],
-        },
-      ],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-    });
-    return allBlogs
+  const where = { is_active: true };
+  if (category_slug && category_slug !== "all") {
+    // Filtering by id rather than through the include keeps paging right and each story's full category list.
+    where.id = await blogIdsInCategory(category_slug);
   }
+
+  const blogDoc = await Blogs.findAndCountAll({
+    distinct: true,
+    where,
+    include: listIncludes(),
+    order: [["id", sortBy === "DESC" ? "DESC" : "ASC"]],
+    limit,
+    offset,
+  });
+  return {
+    count: blogDoc.count,
+    rows: blogDoc.rows.map((blog) => presentStory(blog, viewer)),
+  };
 };
 
-const searchBlogByCategoryNameOrBlogHeadings = async (queryData) => {
-  const { sortBy, limit, page, offset, query } = queryData;
+const searchBlogByCategoryNameOrBlogHeadings = async (queryData, viewer) => {
+  const { limit, offset, query } = queryData;
+  if (typeof query !== "string" || query.trim() === "") return [];
 
-  try {
-    const blogDoc = await Blogs.findAll({
-      attributes: [
-        "id",
-        "heading",
-        "description",
-        "likes_count",
-        "is_active",
-        "type",
+  const like = { [Op.like]: `%${query.trim()}%` };
+  // Searching "paid" or "unpaid" finds that kind of story. A partial match would also find UNPAID for "paid".
+  const type = query.trim().toUpperCase();
+  const categories = await Category.findAll({ attributes: ["id"], where: { title: like } });
+  const links = categories.length
+    ? await BlogCategory.findAll({
+        attributes: ["blog_id"],
+        where: { category_id: categories.map((category) => category.id) },
+      })
+    : [];
+
+  const blogDoc = await Blogs.findAll({
+    attributes: [
+      "id",
+      "heading",
+      "description",
+      "likes_count",
+      "is_active",
+      "type",
+    ],
+    where: {
+      is_active: true,
+      [Op.or]: [
+        { heading: like },
+        ...(["PAID", "UNPAID"].includes(type) ? [{ type }] : []),
+        { id: links.map((link) => link.blog_id) },
       ],
-      where: {
-        [Op.or]: [
-          { heading: { [Op.like]: `%${query}%` } },
-          { type: { [Op.like]: `%${query}%` } },
-          {
-            "$Categories.title$": {
-              [Op.like]: `%${query}%`,
-            },
-          },
-        ],
-      },
-      include: [
-        {
-          model: BlogAttachment,
-          as: "blog_attachment",
-          attributes: ["id", "file_type", "file_name", "file_uri"],
-        },
-        {
-          model: Category,
-          through: {
-            attributes: [],
-          },
-          attributes: ["id", "title", "slug"],
-        },
-      ],
-    });
-    if (!blogDoc) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        "Failed to Get Blog from this category"
-      );
-    }
-    return blogDoc;
-  } catch (error) {
-    return [];
-  }
+    },
+    include: listIncludes(),
+    order: [["id", "ASC"]],
+    limit,
+    offset,
+  });
+  return blogDoc.map((blog) => presentStory(blog, viewer));
 };
 
 const markBlogAsViewed = async (body, blog_id) => {
   const { user } = body;
-  const blogDoc = await Blogs.findOne({ where: { id: blog_id } });
+  const blogDoc = await Blogs.findOne({ where: { id: blog_id, is_active: true } });
   if (!blogDoc) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Blog not found");
   }
+  if (!canReadStory(blogDoc, user)) {
+    throw new ApiError(httpStatus.FORBIDDEN, LOCKED_STORY_MESSAGE);
+  }
 
-  const viewObj = {
-    user_id: user.id,
-    blog_id: blog_id,
-  };
-
-  // Create a new entry
-  const viewDoc = await BlogViews.create(viewObj);
-  if (!viewDoc)
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to mark as viewed"
-    );
-
-  blogDoc.views_count = (blogDoc.views_count ? blogDoc.views_count : 0) + 1;
-  await blogDoc.save();
+  // One view per reader, however often they open the story.
+  const [viewDoc, created] = await BlogViews.findOrCreate({
+    where: { user_id: user.id, blog_id: blogDoc.id },
+  });
+  if (created) {
+    await blogDoc.increment("views_count");
+  }
 
   return viewDoc;
 };

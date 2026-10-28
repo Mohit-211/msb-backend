@@ -2,194 +2,152 @@
 
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../utils/ApiError");
-const { AiStory, Blogs, BlogCategory, User,Category,BlogAttachment } = require("../models");
+const { AiStory, Blogs, User, Category } = require("../models");
 const { Op } = require("sequelize");
+const pageOf = require("../helpers/pageOf");
+const parseCategoryIds = require("../helpers/parseCategoryIds");
+const { sanitizeRichText } = require("../utils/sanitizeHtml");
+const { STORY_TYPES, checkHeadingLength, setBlogCategories, saveAttachments } = require("./blog.service");
 
-const getAllGeneratedStories = async () => {
-	try {
-		let storyDocs = await AiStory.findAll({
-			where: { is_active: true },
-			include: [
-				{
-					model: User,
-					as: "generated_by",
-					attributes: ["id", "email", "name"],
-				},
-				{
-					model: Blogs,
-					as: "ai_stoies_blog",
-					attributes: ["id"], // only include blog ID
-				},
-			],
-		});
+const isFilled = (value) => typeof value === "string" && value.trim() !== "";
 
-		if (!storyDocs) {
-			throw new ApiError(
-				httpStatus.INTERNAL_SERVER_ERROR,
-				"Failed to get history"
-			);
-		}
-
-		return storyDocs;
-	} catch (error) {
-		console.log(error);
-		throw new ApiError(
-			httpStatus.INTERNAL_SERVER_ERROR,
-			"Failed to get Story history"
-		);
+// With ?limit= (and ?page=) the result is one page, as { count, rows }.
+const getAllGeneratedStories = async (query = {}) => {
+	// The stories users chose to save, plus any already published.
+	const options = {
+		where: {
+			is_active: true,
+			[Op.or]: [{ is_user_saved: true }, { is_posted: true }],
+		},
+		include: [
+			{
+				model: User,
+				as: "generated_by",
+				attributes: ["id", "email", "name"],
+			},
+			{
+				model: Blogs,
+				as: "ai_stoies_blog",
+				attributes: ["id", "is_active"],
+			},
+		],
+		order: [["id", "DESC"]],
+	};
+	if (query.limit) {
+		return AiStory.findAndCountAll({ ...options, ...pageOf(query, 50), distinct: true });
 	}
+	return AiStory.findAll(options);
 };
 
 const getStoryById = async (id) => {
-	try {
-		let storyDocs = await AiStory.findOne({
-			where: { id: id, is_active: true },
-			include: [
-				{
-					model: User,
-					as: "generated_by",
-					attributes: ["id", "email", "name"],
-				},
-			],
-		});
-		if (!storyDocs) {
-			throw new ApiError(
-				httpStatus.INTERNAL_SERVER_ERROR,
-				"Failed to get history"
-			);
-		}
-		return storyDocs;
-	} catch (error) {
-		console.log(error);
-		throw new ApiError(
-			httpStatus.INTERNAL_SERVER_ERROR,
-			"Failed to get Story history"
-		);
+	const storyDoc = await AiStory.findOne({
+		where: { id: id, is_active: true },
+		include: [
+			{
+				model: User,
+				as: "generated_by",
+				attributes: ["id", "email", "name"],
+			},
+			{
+				model: Blogs,
+				as: "ai_stoies_blog",
+				attributes: ["id", "type", "is_active"],
+				include: [
+					{
+						model: Category,
+						through: { attributes: [] },
+						attributes: ["id", "title", "slug"],
+					},
+				],
+			},
+		],
+	});
+	if (!storyDoc) {
+		throw new ApiError(httpStatus.NOT_FOUND, "Story not found");
 	}
+
+	// The edit page pre-selects the categories of the published story.
+	const story = storyDoc.toJSON();
+	story.categories = story.ai_stoies_blog?.[0]?.Categories ?? [];
+	return story;
 };
 
+// Publishes a saved AI story as a regular story, or updates or unpublishes one that is already live.
+// The admin can edit the title and text, and choose whether it is free (UNPAID) or PAID.
 const makeGeneratedStoryLive = async (reqBody, id, files) => {
-	const { heading, categories = [], status, type } = reqBody;
+	const { heading, description, status, type, user } = reqBody;
+	const categoryIds = parseCategoryIds(reqBody.categories);
 
-	try {
-		const storyDoc = await AiStory.findOne({
-			where: { id: id, is_active: true },
+	if (isFilled(type) && !STORY_TYPES.includes(type)) {
+		throw new ApiError(httpStatus.BAD_REQUEST, "type must be PAID or UNPAID");
+	}
+
+	const storyDoc = await AiStory.findOne({
+		where: { id: id, is_active: true },
+	});
+	if (!storyDoc) {
+		throw new ApiError(httpStatus.NOT_FOUND, "Story not found");
+	}
+
+	// Without a status, edits go to the live copy if the story is already published.
+	const publish = status ? status === "published" : storyDoc.is_posted;
+
+	return AiStory.sequelize.transaction(async (transaction) => {
+		if (isFilled(heading)) storyDoc.heading = heading.trim();
+		if (isFilled(description)) storyDoc.description = sanitizeRichText(description);
+		if (isFilled(type)) storyDoc.type = type;
+		storyDoc.is_posted = publish;
+		await storyDoc.save({ transaction });
+
+		let blogDoc = await Blogs.findOne({
+			where: { ai_story_id: storyDoc.id },
+			transaction,
 		});
 
-		if (!storyDoc) {
-			throw new ApiError(httpStatus.NOT_FOUND, "Story not found");
-		}
-
-		// Update heading always
-		if (heading) storyDoc.heading = heading;
-
-		// Save updated heading and posted flag
-		if (status) {
-			storyDoc.is_posted = status === "published";
-		}
-		await storyDoc.save();
-
-		// If status is not published, stop here
-		if (status !== "published") {
+		if (!publish) {
+			// Unpublishing takes the story off the site; publishing again brings it back.
+			if (blogDoc?.is_active) {
+				blogDoc.is_active = false;
+				await blogDoc.save({ transaction });
+			}
 			return { message: "Story updated without publishing" };
 		}
 
-		// Check for existing blog with same ai_story_id
-		let blogDoc = await Blogs.findOne({
-			where: { ai_story_id: id },
-		});
-
-		// If blog exists with same ai_story_id, update it
-		if (blogDoc) {
-			blogDoc.heading = storyDoc.heading;
-			blogDoc.description = storyDoc.description;
-			blogDoc.type = type;
-			await blogDoc.save();
-
-			// Update categories (delete existing and add new)
-			await BlogCategory.destroy({ where: { blog_id: blogDoc.id } });
-
-			for (const catId of categories) {
-				const categoryObj = await Category.findOne({ where: { id: catId } });
-				if (categoryObj) {
-					await BlogCategory.create({
-						blog_id: blogDoc.id,
-						category_id: categoryObj.id,
-						category_slug: categoryObj.slug,
-						category_name: categoryObj.title,
-					});
-				}
-			}
-		} else {
-			// Check for duplicate blog with same heading from different AI story
-			const duplicateHeading = await Blogs.findOne({
-				where: {
-					heading: storyDoc.heading,
-					ai_story_id: { [Op.ne]: id }, // only check for others
-				},
-			});
-
-			if (duplicateHeading) {
-				throw new ApiError(
-					httpStatus.BAD_REQUEST,
-					"Blog with this title already exists"
-				);
-			}
-
-			// Create new blog
-			blogDoc = await Blogs.create({
+		// AI story titles can be longer than a published story's; the admin shortens them before publishing.
+		checkHeadingLength(storyDoc.heading);
+		const duplicate = await Blogs.findOne({
+			where: {
 				heading: storyDoc.heading,
-				description: storyDoc.description,
-				type,
-				ai_story_id: id,
-			});
-
-			for (const catId of categories) {
-				const categoryObj = await Category.findOne({ where: { id: catId } });
-				if (categoryObj) {
-					await BlogCategory.create({
-						blog_id: blogDoc.id,
-						category_id: categoryObj.id,
-						category_slug: categoryObj.slug,
-						category_name: categoryObj.title,
-					});
-				}
-			}
+				...(blogDoc && { id: { [Op.ne]: blogDoc.id } }),
+			},
+			transaction,
+		});
+		if (duplicate) {
+			throw new ApiError(httpStatus.BAD_REQUEST, "Blog with this title already exists");
 		}
 
-		// Upload attachments
-		if (files?.images?.length) {
-			for (let currImage of files.images) {
-				await BlogAttachment.create({
-					blog_id: blogDoc.id,
-					file_type: "Image",
-					file_name: currImage.filename,
-					file_uri: "/images",
-					file_size: currImage.size,
-				});
-			}
+		const fields = {
+			heading: storyDoc.heading,
+			// Stories generated before the API escaped model output may hold raw HTML.
+			description: sanitizeRichText(storyDoc.description),
+			type: storyDoc.type,
+			is_active: true,
+		};
+		if (blogDoc) {
+			await blogDoc.update(fields, { transaction });
+		} else {
+			blogDoc = await Blogs.create(
+				{ ...fields, ai_story_id: storyDoc.id, created_by: user?.id },
+				{ transaction }
+			);
 		}
 
-		if (files?.videos?.length) {
-			for (let currVideo of files.videos) {
-				await BlogAttachment.create({
-					blog_id: blogDoc.id,
-					file_type: "Video",
-					file_name: currVideo.filename,
-					file_uri: "/videos",
-					file_size: currVideo.size,
-				});
-			}
+		if (categoryIds !== undefined) {
+			await setBlogCategories(blogDoc.id, categoryIds, transaction);
 		}
-
+		await saveAttachments(blogDoc.id, files, transaction);
 		return blogDoc;
-	} catch (error) {
-		console.log(error);
-		throw new ApiError(
-			httpStatus.INTERNAL_SERVER_ERROR,
-			"Failed to make story live"
-		);
-	}
+	});
 };
 
 module.exports = {

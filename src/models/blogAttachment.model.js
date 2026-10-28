@@ -64,17 +64,11 @@ BlogAttachment.init(
 );
 
 BlogAttachment.beforeUpdate(async (BlogAttachment) => {
-  BlogAttachment.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogAttachment.updated_at = new Date();
 });
 
 BlogAttachment.beforeDestroy(async (BlogAttachment) => {
-  BlogAttachment.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
+  BlogAttachment.deleted_at = new Date();
   BlogAttachment.is_active = false;
 });
 

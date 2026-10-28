@@ -2,10 +2,11 @@ const { status: httpStatus } = require("http-status");
 
 const {  BannerContent } = require("../models");
 const ApiError = require("../utils/ApiError");
+const { sanitizeRichText } = require("../utils/sanitizeHtml");
 
 const createBannerContent = async (reqBody, files) => {
   const contentObj = {
-    banner_content: reqBody.banner_content,
+    banner_content: sanitizeRichText(reqBody.banner_content),
   };
 
   if (
@@ -65,7 +66,7 @@ const updateBannerContent = async (reqBody, files) => {
     reqBody.banner_content !== "" &&
     typeof reqBody.banner_content !== "undefined"
   ) {
-    contentDoc["banner_content"] = reqBody.banner_content;
+    contentDoc["banner_content"] = sanitizeRichText(reqBody.banner_content);
   }
  
 

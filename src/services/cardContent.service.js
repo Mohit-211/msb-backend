@@ -2,10 +2,12 @@ const { status: httpStatus } = require("http-status");
 
 const { CardContent } = require("../models");
 const ApiError = require("../utils/ApiError");
+const { sanitizeRichText, assertSafeUrl } = require("../utils/sanitizeHtml");
 
 const createCardContent = async (reqBody) => {
+  assertSafeUrl(reqBody.redirection_url, "redirection_url");
   const contentObj = {
-    card_content: reqBody.card_content,
+    card_content: sanitizeRichText(reqBody.card_content),
     redirection_url: reqBody.redirection_url,
   };
 
@@ -49,12 +51,13 @@ const updateCardContent = async (reqBody) => {
   if (!contentDoc) {
     throw new ApiError(httpStatus.NOT_FOUND, "Content not found");
   }
+  assertSafeUrl(reqBody.redirection_url, "redirection_url");
   if (
     reqBody.card_content &&
     reqBody.card_content !== "" &&
     typeof reqBody.card_content !== "undefined"
   ) {
-    contentDoc["card_content"] = reqBody.card_content;
+    contentDoc["card_content"] = sanitizeRichText(reqBody.card_content);
   }
   if (
     reqBody.redirection_url &&
