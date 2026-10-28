@@ -1,4 +1,4 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 
 const { CardContent } = require("../models");
 const ApiError = require("../utils/ApiError");

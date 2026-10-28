@@ -1,4 +1,4 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const ApiError = require("../utils/ApiError");
 const slugify = require("slugify");
 const { AiStory } = require("../models");

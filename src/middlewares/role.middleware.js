@@ -1,4 +1,4 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 
 const catchAsync = require("../utils/catchAsync");
 
@@ -10,10 +10,7 @@ const isSuperAdmin = catchAsync(async (req, res, next) => {
   if (!roleDoc || roleDoc.name !== Roles.ADM) {
     return res
       .status(httpStatus.UNAUTHORIZED)
-      .send(
-        httpStatus.UNAUTHORIZED,
-        "|=> You are not authorized to access this api <=|"
-      );
+      .send("|=> You are not authorized to access this api <=|");
   }
   next();
 });

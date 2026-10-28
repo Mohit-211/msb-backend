@@ -2,7 +2,7 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const compression = require("compression");
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const path = require("path");
 
 const config = require("./src/config/config.js");
@@ -41,6 +41,11 @@ app.use(helmet());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Express 5 leaves req.body undefined when a request has no body; the controllers expect an object.
+app.use((req, res, next) => {
+  req.body ??= {};
+  next();
+});
 
 app.use(compression());
 

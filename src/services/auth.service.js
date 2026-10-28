@@ -1,7 +1,6 @@
-const httpStatus = require("http-status");
+const crypto = require("crypto");
+const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
-const moment = require("moment");
-const randomize = require("randomatic");
 
 const {
   OTP,
@@ -23,7 +22,7 @@ const sendOTP = async ({ email, type }) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid OTP type");
   }
 
-  const generatedOTP = randomize("0", 4);
+  const generatedOTP = crypto.randomInt(0, 10000).toString().padStart(4, "0");
   await sendForgotPasswordOTP(email, generatedOTP);
 
   let otpObj = {
@@ -139,7 +138,7 @@ const forgotPassword = async (email, otp, password, confirm_Password) => {
     {
       password: bcrypt.hashSync(password, salt),
       hash: bcrypt.hashSync(password),
-      updated_at: moment(),
+      updated_at: new Date(),
     },
     {
       where: { email: user.email },
@@ -158,8 +157,8 @@ const logout = async (reqBody, headers) => {
   await LoginTiming.update(
     {
       is_active: false,
-      logout_time: moment(),
-      updated_at: moment(),
+      logout_time: new Date(),
+      updated_at: new Date(),
     },
     {
       where: {

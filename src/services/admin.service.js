@@ -1,4 +1,4 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const { Sequelize, Op } = require("sequelize");
 const jwt = require("jsonwebtoken");

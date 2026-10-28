@@ -1,17 +1,18 @@
 const jwt = require('jsonwebtoken')
-const moment = require('moment')
 const config = require('../config/config');
 
 const  tokenTypes  = require('../config/tokens');
 const { QueryTypes } = require('sequelize');
 const  sequelize  = require('../config/central.db');
 
+const toUnixSeconds = (date) => Math.floor(date.getTime() / 1000);
+
 const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
 
     const payload = {
         sub: userId,
-        iat: moment().unix(),
-        exp: expires.unix(),
+        iat: toUnixSeconds(new Date()),
+        exp: toUnixSeconds(expires),
         type,
     };
     return jwt.sign(payload, secret);
@@ -41,10 +42,13 @@ const saveLoginTiming = async (token, userId) => {
 
 const generateAuthTokens = async (user) => {
 
-    const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'days');
+    const accessTokenExpires = new Date();
+    accessTokenExpires.setDate(accessTokenExpires.getDate() + config.jwt.accessExpirationMinutes);
     const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS);
 
-    await saveToken(accessToken, user.id, moment.utc(accessTokenExpires).format('YYYY-MM-DD HH:mm:ss'), tokenTypes.ACCESS);
+    // MySQL DATETIME in UTC, e.g. "2026-10-28 14:05:09"
+    const expiredAt = accessTokenExpires.toISOString().slice(0, 19).replace('T', ' ');
+    await saveToken(accessToken, user.id, expiredAt, tokenTypes.ACCESS);
 
     await saveLoginTiming(
         accessToken,
@@ -54,7 +58,7 @@ const generateAuthTokens = async (user) => {
     return {
         access: {
             token: accessToken,
-            expires: accessTokenExpires.toDate(),
+            expires: accessTokenExpires,
         },
         refresh: {
             token: '',

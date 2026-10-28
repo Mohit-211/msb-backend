@@ -1,4 +1,4 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const slugify = require("slugify");
 
 const { Category } = require("../models");

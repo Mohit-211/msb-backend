@@ -1,10 +1,12 @@
-const dotenv = require("dotenv");
 const path = require("path");
 const Joi = require("joi");
 
-dotenv.config({
-  path: path.join(__dirname, "../../.env"),
-});
+// Node's built-in .env loader. Like dotenv, it keeps variables that are already set (e.g. by PM2).
+try {
+  process.loadEnvFile(path.join(__dirname, "../../.env"));
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
 
 const envVarsSchema = Joi.object({
   NODE_ENV: Joi.string().valid("production", "development", "test").required(),
