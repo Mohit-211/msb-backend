@@ -3,6 +3,8 @@ const { status: httpStatus } = require("http-status");
 const {  BannerContent } = require("../models");
 const ApiError = require("../utils/ApiError");
 const { sanitizeRichText } = require("../utils/sanitizeHtml");
+const findByIdOr404 = require("../helpers/findByIdOr404");
+const filledIfSent = require("../helpers/filledIfSent");
 
 const createBannerContent = async (reqBody, files) => {
   const contentObj = {
@@ -44,31 +46,14 @@ const getAllBannerContent = async () => {
   return contentDoc;
 };
 
-const findBannerContentById = async (id) => {
-  const contentDoc = await BannerContent.findOne({
-    where: { id: id },
-  });
-  return contentDoc ? contentDoc : {};
-};
+const findBannerContentById = async (id) => findByIdOr404(BannerContent, id, "Banner");
 
 const updateBannerContent = async (reqBody, files) => {
-  const contentDoc = await BannerContent.findOne({
-    where: {
-      id: reqBody.content_id,
-    },
-  });
-
-  if (!contentDoc) {
-    throw new ApiError(httpStatus.NOT_FOUND, "BannerContent not found");
+  const contentDoc = await findByIdOr404(BannerContent, reqBody.content_id, "Banner");
+  const bannerContent = filledIfSent(reqBody, "banner_content");
+  if (bannerContent !== undefined) {
+    contentDoc["banner_content"] = sanitizeRichText(bannerContent);
   }
-  if (
-    reqBody.banner_content &&
-    reqBody.banner_content !== "" &&
-    typeof reqBody.banner_content !== "undefined"
-  ) {
-    contentDoc["banner_content"] = sanitizeRichText(reqBody.banner_content);
-  }
- 
 
   if (
     files &&
@@ -84,7 +69,7 @@ const updateBannerContent = async (reqBody, files) => {
 
   await contentDoc.save();
 
-  return contentDoc ? contentDoc : {};
+  return contentDoc;
 };
 
 const deleteBannerContent = async (reqBody) => {

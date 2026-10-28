@@ -1,15 +1,30 @@
 const { status: httpStatus } = require("http-status");
 const slugify = require("slugify");
+const { Op } = require("sequelize");
 
 const { Category } = require("../models");
 const ApiError = require("../utils/ApiError");
+const findByIdOr404 = require("../helpers/findByIdOr404");
+const filledIfSent = require("../helpers/filledIfSent");
 
-const findCategoryById = async (id) => {
-  const categoryDoc = await Category.findOne({
-    where: { id: id },
+// The slug is the category's address on the site, so two categories can't share one. On a rename the
+// category's own slug doesn't count.
+const assertSlugFree = async (title, exceptId) => {
+  const existingCategory = await Category.findOne({
+    where: {
+      slug: slugify(title, { lower: true }),
+      ...(exceptId && { id: { [Op.ne]: exceptId } }),
+    },
   });
-  return categoryDoc ? categoryDoc : {};
+  if (existingCategory) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Category with the same title already exists"
+    );
+  }
 };
+
+const findCategoryById = async (id) => findByIdOr404(Category, id, "Category");
 
 const findCategoryBySlug = async (slug) => {
   const categoryDoc = typeof slug === "string" && slug !== ""
@@ -22,17 +37,7 @@ const findCategoryBySlug = async (slug) => {
 };
 
 const createCategory = async (reqBody,files) => {
-  const existingCategory = await Category.findOne({
-    where: {
-      slug: slugify(reqBody.title, { lower: true }),
-    },
-  });
-  if (existingCategory) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "Category with the same title already exists"
-    );
-  }
+  await assertSlugFree(reqBody.title);
   const categoryObj = {
     title: reqBody.title,
   };
@@ -59,22 +64,12 @@ const createCategory = async (reqBody,files) => {
 };
 
 const updateCategory = async (reqBody,files) => {
-  const categoryDoc = await Category.findOne({
-    where: {
-      id: reqBody.category_id,
-    },
-  });
-
-  if (!categoryDoc) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Category not found");
-  }
-  if (
-    reqBody.title &&
-    typeof reqBody.title !== "undefined" &&
-    reqBody.title !== ""
-  ) {
-    categoryDoc["title"] = reqBody.title;
-    categoryDoc.slug = slugify(reqBody.title, { lower: true });
+  const categoryDoc = await findByIdOr404(Category, reqBody.category_id, "Category");
+  const title = filledIfSent(reqBody, "title");
+  if (title !== undefined) {
+    await assertSlugFree(title, categoryDoc.id);
+    categoryDoc["title"] = title;
+    categoryDoc.slug = slugify(title, { lower: true });
   }
 
   if (
@@ -89,7 +84,7 @@ const updateCategory = async (reqBody,files) => {
   }
 
   await categoryDoc.save();
-  return categoryDoc ? categoryDoc : {};
+  return categoryDoc;
 };
 
 const getAllCategorys = async () => {

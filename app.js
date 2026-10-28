@@ -66,7 +66,8 @@ app.use((req, res, next) => {
   next(new ApiError(httpStatus.NOT_FOUND, "Not found"));
 });
 
-// Errors go out as JSON. Client errors keep their message; anything else is logged and hidden.
+// Errors go out as JSON. Client errors keep their message, and so does a server error marked `expose`,
+// whose message was written for the admin; anything else is logged and hidden.
 // Express recognises error handlers by their four arguments, so `next` must stay.
 app.use((err, req, res, next) => {
   const code = err.statusCode || err.status;
@@ -76,7 +77,7 @@ app.use((err, req, res, next) => {
   res.status(status).json({
     success: false,
     status,
-    message: status < 500 ? err.message : "Internal Server Error",
+    message: status < 500 || err.expose === true ? err.message : "Internal Server Error",
   });
 });
 

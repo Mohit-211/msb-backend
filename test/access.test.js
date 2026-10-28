@@ -9,11 +9,13 @@ const { Sequelize } = nm("sequelize");
 const sequelize = new Sequelize({ dialect: "sqlite", storage: ":memory:", logging: false, dialectModule: nm("sqlite3") });
 inject("src/config/central.db.js", sequelize);
 const mails = [];
+let mailDown = false; // set to make the credentials emails fail, as when SMTP is down
+const mailFailure = () => { if (mailDown) throw new Error("SMTP connection refused (test)"); };
 inject("src/services/email.service.js", {
   sendForgotPasswordOTP: async (to, otp) => { mails.push({ type: "otp", to, otp }); },
   sendResetPasswordConfirmationMail: async (to) => { mails.push({ type: "reset", to }); return true; },
-  sendUserCredentials: async (to, password) => { mails.push({ type: "userCreds", to, password }); return true; },
-  sendAdminCredentials: async (to, password) => { mails.push({ type: "adminCreds", to, password }); return true; },
+  sendUserCredentials: async (to, password) => { mailFailure(); mails.push({ type: "userCreds", to, password }); return true; },
+  sendAdminCredentials: async (to, password) => { mailFailure(); mails.push({ type: "adminCreds", to, password }); return true; },
 });
 inject("src/config/openAi.js", { chat: { completions: { create: async () => ({ choices: [{ message: { content: "She opened the cafe at dawn." } }] }) } } });
 
@@ -297,6 +299,79 @@ const DAY = 24 * 60 * 60 * 1000;
   res = await call("POST", "/content/createBannerContent", { token: EDITOR, form: form({ banner_content: "<h1>Hi</h1><iframe src=evil></iframe><a href=\"javascript:x\">x</a>" }) });
   const banner = await BannerContent.findOne({ order: [["id", "DESC"]] });
   check("banner HTML is sanitized", res.status === 200 && banner?.banner_content === "<h1>Hi</h1><a rel=\"noopener noreferrer nofollow\">x</a>", short(banner?.banner_content));
+
+  group("Admin panel audit: new accounts, renames, lookups, the ADMIN role, section files");
+  mailDown = true;
+  res = await call("POST", "/admin/register", { token: SUPER, form: form({ name: "Third", email: "third@msb.test", role_id: String(editorRole.id) }) });
+  check("if the password email fails, adding an admin is a 502 that says so", res.status === 502 && /wasn't created/.test(res.data?.message), `${res.status} ${short(res.data)}`);
+  check("…and no admin is left behind", (await Admin.count({ where: { email_id: "third@msb.test" }, paranoid: false })) === 0);
+  res = await call("POST", "/admin/createUser", { token: SUPER, form: form({ name: "Later", email: "later@msb.test" }) });
+  check("the same for a new customer", res.status === 502 && (await User.count({ where: { email: "later@msb.test" }, paranoid: false })) === 0, `${res.status}`);
+  mailDown = false;
+  res = await call("POST", "/admin/register", { token: SUPER, form: form({ name: "Third", email: "third@msb.test", role_id: String(editorRole.id) }) });
+  check("trying again works, instead of \"Email already taken\"", res.status === 200 && mails.some((m) => m.type === "adminCreds" && m.to === "third@msb.test"), `${res.status} ${short(res.data)}`);
+  res = await call("POST", "/admin/createUser", { token: SUPER, form: form({ name: "Later", email: "later@msb.test" }) });
+  check("…for the customer too", res.status === 200 && mails.some((m) => m.type === "userCreds" && m.to === "later@msb.test"), `${res.status}`);
+  res = await call("POST", "/admin/register", { token: SUPER, form: form({ name: "Nobody", email: "nobody@msb.test", role_id: "99999" }) });
+  check("an unknown role on Add Admin is still a 400", res.status === 400, `${res.status}`);
+
+  res = await call("PUT", "/category/updateCategory", { token: EDITOR, form: form({ category_id: String(life.id), title: "FICTION" }) });
+  check("renaming a category to another's title is refused", res.status === 400 && (await Category.findByPk(life.id)).slug === "life", `${res.status}`);
+  check("…so no two categories share a slug", (await Category.count({ where: { slug: "fiction" } })) === 1);
+  res = await call("PUT", "/category/updateCategory", { token: EDITOR, form: form({ category_id: String(life.id), title: "Life Stories" }) });
+  check("a rename to a free title works", res.status === 200 && (await Category.findByPk(life.id)).slug === "life-stories", `${res.status}`);
+  res = await call("PUT", "/category/updateCategory", { token: EDITOR, form: form({ category_id: String(life.id), title: "Life" }) });
+  check("…and so does saving a category under its own slug", res.status === 200 && (await Category.findByPk(life.id)).slug === "life", `${res.status}`);
+
+  for (const p of ["/admin/getAdminById?id=99999", "/category/getCategoryById?id=99999", "/role/getRolebyId?id=99999", "/content/findSectionContentById?id=99999", "/content/findBannerContentById?id=99999", "/content/findCardContentById?id=99999", "/content/findSocialLoginById?id=99999", "/category/getCategoryById"]) {
+    res = await call("GET", p, { token: SUPER });
+    check(`${p.split("?")[0]} with ${p.includes("?") ? "an unknown" : "no"} id is a 404, not an empty 200`, res.status === 404 && res.data?.success === false, `${res.status} ${short(res.data)}`);
+  }
+  res = await call("PUT", "/category/updateCategory", { token: EDITOR, form: form({ category_id: String(fiction.id), title: " " }) });
+  check("an empty field on an edit is a 400 naming it, not a silent success", res.status === 400 && res.data?.message === "title can't be empty" && (await Category.findByPk(fiction.id)).title === "Fiction", `${res.status} ${short(res.data)}`);
+  res = await call("PUT", "/role/editRole", { token: SUPER, form: form({ role_id: String(editorRole.id), name: "SUB-ADMIN", abbreviation: "" }) });
+  check("…for a role's abbreviation", res.status === 400 && (await Role.findByPk(editorRole.id)).abbreviation === "SUB", `${res.status}`);
+  res = await call("PUT", "/admin/updateAdmin", { token: SUPER, json: { admin_id: editor.id, name: "" } });
+  check("…an admin's name", res.status === 400 && (await Admin.findByPk(editor.id)).name === "Editor", `${res.status}`);
+  res = await call("PUT", "/blog/updateBlog", { token: EDITOR, json: { blog_id: freeStory.id, heading: "" } });
+  check("…a story's title", res.status === 400 && (await Blogs.findByPk(freeStory.id)).heading === "Free story", `${res.status}`);
+  res = await call("POST", `/story/makeGeneratedStoryLive/${trialStory?.id}`, { token: EDITOR, form: form({ description: "" }) });
+  check("…an AI story's text", res.status === 400 && (await AiStory.findByPk(trialStory.id)).description !== "", `${res.status}`);
+  res = await call("PUT", "/blog/updateBlog", { token: EDITOR, json: { blog_id: freeStory.id, type: "" } });
+  check("an empty story type gets the PAID or UNPAID message", res.status === 400 && /PAID or UNPAID/.test(res.data?.message), `${res.status} ${short(res.data)}`);
+  await call("POST", "/content/createCardContent", { token: EDITOR, form: form({ card_content: "<p>Card</p>", redirection_url: "https://mystorybank.info/" }) });
+  const card = await M.CardContent.findOne({ order: [["id", "DESC"]] });
+  res = await call("PUT", "/content/updateCardContent", { token: EDITOR, json: { content_id: card?.id, card_content: "<p>Card</p>", redirection_url: "" } });
+  check("…and a card's link", res.status === 400 && (await M.CardContent.findByPk(card.id)).redirection_url === "https://mystorybank.info/", `${res.status}`);
+  res = await call("PUT", "/content/updateCardContent", { token: EDITOR, json: { content_id: card?.id, redirection_url: "/stories" } });
+  const cardNow = await M.CardContent.findByPk(card.id);
+  check("a field left out of an edit keeps its value", res.status === 200 && cardNow.card_content === "<p>Card</p>" && cardNow.redirection_url === "/stories", `${res.status} ${short(cardNow)}`);
+
+  res = await call("PUT", "/role/editRole", { token: SUPER, form: form({ role_id: String(superRole.id), name: "ADMIN", abbreviation: "SA" }) });
+  const adminRole = await Role.findByPk(superRole.id);
+  check("the ADMIN role's abbreviation can be edited when its name is sent unchanged", res.status === 200 && adminRole.abbreviation === "SA" && adminRole.name === "ADMIN", `${res.status} ${short(res.data)}`);
+  res = await call("PUT", "/role/editRole", { token: SUPER, json: { role_id: superRole.id, abbreviation: "ADM" } });
+  check("…or left out", res.status === 200 && (await Role.findByPk(superRole.id)).abbreviation === "ADM", `${res.status}`);
+  res = await call("PUT", "/role/editRole", { token: SUPER, form: form({ role_id: String(superRole.id), name: "Admin", abbreviation: "ADM" }) });
+  check("…but its name can't change, not even its case", res.status === 400 && (await Role.findByPk(superRole.id)).name === "ADMIN", `${res.status}`);
+  res = await call("GET", "/admin/getAdminProfile", { token: SUPER });
+  check("…so the super admin keeps full access", res.data?.data?.is_super_admin === true, short(res.data?.data?.is_super_admin));
+
+  const jpeg = () => new Blob([Buffer.from("fakejpeg")], { type: "image/jpeg" });
+  const mp4 = () => new Blob([Buffer.from("fakemp4")], { type: "video/mp4" });
+  const withFiles = (fields, files) => { const f = form(fields); for (const [field, blob, name] of files) f.append(field, blob, name); return f; };
+  const sectionFields = { section_content: "<p>Section</p>", redirection_url: "/stories" };
+  const sectionsBefore = await M.SectionContent.count();
+  res = await call("POST", "/content/createSectionContent", { token: EDITOR, form: withFiles(sectionFields, [["images", jpeg(), "a.jpg"], ["videos", mp4(), "a.mp4"]]) });
+  check("a section sent both an image and a video is refused, not saved with only the video", res.status === 400 && /not both/.test(res.data?.message) && (await M.SectionContent.count()) === sectionsBefore, `${res.status} ${short(res.data)}`);
+  res = await call("POST", "/content/createSectionContent", { token: EDITOR, form: withFiles(sectionFields, [["images", jpeg(), "a.jpg"]]) });
+  const section = await M.SectionContent.findOne({ order: [["id", "DESC"]] });
+  check("…while one with just an image saves it", res.status === 200 && section?.file_type === "Image" && section.file_uri === "/images", `${res.status} ${section?.file_type}`);
+  res = await call("PUT", "/content/updateSectionContent", { token: EDITOR, form: withFiles({ content_id: String(section?.id) }, [["images", jpeg(), "b.jpg"], ["videos", mp4(), "b.mp4"]]) });
+  check("editing a section with both is refused too, and its image stays", res.status === 400 && (await M.SectionContent.findByPk(section.id)).file_name === section.file_name, `${res.status}`);
+  res = await call("PUT", "/content/updateSectionContent", { token: EDITOR, form: withFiles({ content_id: String(section?.id) }, [["videos", mp4(), "c.mp4"]]) });
+  const switched = await M.SectionContent.findByPk(section.id);
+  check("…while switching it to a video works", res.status === 200 && switched.file_type === "Video" && switched.file_uri === "/videos", `${res.status} ${switched.file_type}`);
 
   group("Forgot password");
   await call("POST", "/auth/otp", { json: { email: "expired@msb.test", type: "forget_password" } });

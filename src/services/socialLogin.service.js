@@ -2,6 +2,8 @@ const { status: httpStatus } = require("http-status");
 
 const { SocialLogins } = require("../models");
 const ApiError = require("../utils/ApiError");
+const findByIdOr404 = require("../helpers/findByIdOr404");
+const filledIfSent = require("../helpers/filledIfSent");
 
 const createSocialLogin = async (reqBody) => {
   const contentObj = {
@@ -32,41 +34,22 @@ const getAllSocialLogin = async () => {
   return contentDoc;
 };
 
-const findSocialLoginById = async (id) => {
-  const contentDoc = await SocialLogins.findOne({
-    where: { id: id },
-  });
-  return contentDoc ? contentDoc : {};
-};
+const findSocialLoginById = async (id) => findByIdOr404(SocialLogins, id, "Social link");
 
 const updateSocialLogin = async (reqBody) => {
-  const contentDoc = await SocialLogins.findOne({
-    where: {
-      id: reqBody.content_id,
-    },
-  });
-
-  if (!contentDoc) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Content not found");
+  const contentDoc = await findByIdOr404(SocialLogins, reqBody.content_id, "Social link");
+  const socialMediaName = filledIfSent(reqBody, "social_media_name");
+  const redirectionUrl = filledIfSent(reqBody, "redirection_url");
+  if (socialMediaName !== undefined) {
+    contentDoc["social_media_name"] = socialMediaName;
   }
-  if (
-    reqBody.social_media_name &&
-    reqBody.social_media_name !== "" &&
-    typeof reqBody.social_media_name !== "undefined"
-  ) {
-    contentDoc["social_media_name"] = reqBody.social_media_name;
-  }
-  if (
-    reqBody.redirection_url &&
-    reqBody.redirection_url !== "" &&
-    typeof reqBody.redirection_url !== "undefined"
-  ) {
-    contentDoc["redirection_url"] = reqBody.redirection_url;
+  if (redirectionUrl !== undefined) {
+    contentDoc["redirection_url"] = redirectionUrl;
   }
 
   await contentDoc.save();
 
-  return contentDoc ? contentDoc : {};
+  return contentDoc;
 };
 
 const deleteSocialLogin = async (reqBody) => {

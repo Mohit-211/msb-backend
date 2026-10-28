@@ -57,7 +57,9 @@ Login and `GET /api/v1/user/profile` return `access`: `plan`, `trial_ends_at`, `
 - Routes live under `/api/v1`, and `GET /api/healthcheck` reports health.
 - Users and admins both send their token in `x-access-token`. Admin tokens are signed with `ADMIN_JWT_SECRET` and can't be used as user tokens.
 - A 401 means not signed in or an invalid token; a 403 means signed in but not allowed.
-- Errors come back as `{ "success": false, "status": 400, "message": "..." }`.
+- Errors come back as `{ "success": false, "status": 400, "message": "..." }`. Server errors say only "Internal Server Error", except a 502 when the email with a new account's password can't be sent; then the account isn't created, and the admin can try again.
+- A lookup by an unknown or missing id is a 404.
+- On an edit, a field left out keeps its value, and a field sent empty is refused with a 400 that names it.
 - Uploads happen after authentication. Images must be JPEG, PNG, GIF or WebP, and videos MP4, WebM or MOV, up to 100 MB each.
 - Lists that can grow take `?limit=&page=`, and then answer `{ count, rows }`.
 - Rich text is sanitized on save to what the admin panel's editor produces.

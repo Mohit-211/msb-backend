@@ -6,10 +6,9 @@ const { AiStory, Blogs, User, Category } = require("../models");
 const { Op } = require("sequelize");
 const pageOf = require("../helpers/pageOf");
 const parseCategoryIds = require("../helpers/parseCategoryIds");
+const filledIfSent = require("../helpers/filledIfSent");
 const { sanitizeRichText } = require("../utils/sanitizeHtml");
 const { STORY_TYPES, checkHeadingLength, setBlogCategories, saveAttachments } = require("./blog.service");
-
-const isFilled = (value) => typeof value === "string" && value.trim() !== "";
 
 // With ?limit= (and ?page=) the result is one page, as { count, rows }.
 const getAllGeneratedStories = async (query = {}) => {
@@ -75,10 +74,13 @@ const getStoryById = async (id) => {
 // Publishes a saved AI story as a regular story, or updates or unpublishes one that is already live.
 // The admin can edit the title and text, and choose whether it is free (UNPAID) or PAID.
 const makeGeneratedStoryLive = async (reqBody, id, files) => {
-	const { heading, description, status, type, user } = reqBody;
+	const { status, type, user } = reqBody;
+	const heading = filledIfSent(reqBody, "heading");
+	const description = filledIfSent(reqBody, "description");
 	const categoryIds = parseCategoryIds(reqBody.categories);
 
-	if (isFilled(type) && !STORY_TYPES.includes(type)) {
+	// An empty type is refused like any other value that isn't PAID or UNPAID.
+	if (type !== undefined && !STORY_TYPES.includes(type)) {
 		throw new ApiError(httpStatus.BAD_REQUEST, "type must be PAID or UNPAID");
 	}
 
@@ -93,9 +95,9 @@ const makeGeneratedStoryLive = async (reqBody, id, files) => {
 	const publish = status ? status === "published" : storyDoc.is_posted;
 
 	return AiStory.sequelize.transaction(async (transaction) => {
-		if (isFilled(heading)) storyDoc.heading = heading.trim();
-		if (isFilled(description)) storyDoc.description = sanitizeRichText(description);
-		if (isFilled(type)) storyDoc.type = type;
+		if (heading !== undefined) storyDoc.heading = heading.trim();
+		if (description !== undefined) storyDoc.description = sanitizeRichText(description);
+		if (type !== undefined) storyDoc.type = type;
 		storyDoc.is_posted = publish;
 		await storyDoc.save({ transaction });
 

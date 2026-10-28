@@ -1,12 +1,11 @@
 const { status: httpStatus } = require("http-status");
 const jwt = require("jsonwebtoken");
 
-const { Admin } = require("../models");
+const { Admin, Role } = require("../models");
 const validateEmail = require("../helpers/validateEmail");
 const validatePassword = require("../helpers/validatePassword");
 const ApiError = require("../utils/ApiError");
 
-const { roleService } = require("../services");
 const config = require("../config/config");
 
 const validateCreateAdminBody = async (req, res, next) => {
@@ -27,7 +26,8 @@ const validateCreateAdminBody = async (req, res, next) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "|=> Email already taken <=|");
   }
 
-  const isValidRoleId = await roleService.findRoleById(parseInt(role_id));
+  // A role that doesn't exist is a bad request here, not a missing page.
+  const isValidRoleId = await Role.findByPk(parseInt(role_id));
   if (!isValidRoleId)
     throw new ApiError(httpStatus.BAD_REQUEST, "|=> Invalid Role Id <=|");
 

@@ -4,6 +4,7 @@ const { Op } = require("sequelize");
 const ApiError = require("../utils/ApiError");
 const pageOf = require("../helpers/pageOf");
 const parseCategoryIds = require("../helpers/parseCategoryIds");
+const filledIfSent = require("../helpers/filledIfSent");
 const { sanitizeRichText } = require("../utils/sanitizeHtml");
 const { canReadStory, LOCKED_STORY_MESSAGE } = require("../utils/access");
 const {
@@ -22,8 +23,6 @@ const {
 
 // UNPAID is the free kind of story.
 const STORY_TYPES = ["PAID", "UNPAID"];
-
-const isFilled = (value) => typeof value === "string" && value.trim() !== "";
 
 // blogs.heading is VARCHAR(150); a longer title would fail in the database with a 500.
 const MAX_HEADING_LENGTH = 150;
@@ -215,7 +214,7 @@ const getBlogById = async (id) => {
 };
 
 const updateBlog = async (body, files) => {
-  const { blog_id, heading, description, type } = body;
+  const { blog_id, type } = body;
   const categoryIds = parseCategoryIds(body.categories);
 
   const blogDoc = await Blogs.findOne({
@@ -225,10 +224,13 @@ const updateBlog = async (body, files) => {
   if (!blogDoc) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid Blog Id");
   }
-  if (isFilled(type) && !STORY_TYPES.includes(type)) {
+  const heading = filledIfSent(body, "heading");
+  const description = filledIfSent(body, "description");
+  // An empty type is refused like any other value that isn't PAID or UNPAID.
+  if (type !== undefined && !STORY_TYPES.includes(type)) {
     throw new ApiError(httpStatus.BAD_REQUEST, "type must be PAID or UNPAID");
   }
-  if (isFilled(heading) && heading !== blogDoc.heading) {
+  if (heading !== undefined && heading !== blogDoc.heading) {
     checkHeadingLength(heading);
     const duplicate = await Blogs.findOne({
       where: { heading, id: { [Op.ne]: blogDoc.id } },
@@ -243,9 +245,9 @@ const updateBlog = async (body, files) => {
 
   // One transaction, so a failure part-way leaves the story exactly as it was.
   return Blogs.sequelize.transaction(async (transaction) => {
-    if (isFilled(heading)) blogDoc.heading = heading;
-    if (isFilled(description)) blogDoc.description = sanitizeRichText(description);
-    if (isFilled(type)) blogDoc.type = type;
+    if (heading !== undefined) blogDoc.heading = heading;
+    if (description !== undefined) blogDoc.description = sanitizeRichText(description);
+    if (type !== undefined) blogDoc.type = type;
     await blogDoc.save({ transaction });
 
     // Leaving categories out keeps them as they are; an empty list removes them all.

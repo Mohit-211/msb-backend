@@ -3,17 +3,17 @@ const { status: httpStatus } = require("http-status");
 const { Admin, Role } = require("../models");
 const Roles = require("../config/roles");
 const ApiError = require("../utils/ApiError");
+const findByIdOr404 = require("../helpers/findByIdOr404");
+const filledIfSent = require("../helpers/filledIfSent");
 
-// The role named ADMIN grants full access, including managing admins, roles and customers.
+// The role named ADMIN grants full access, including managing admins, roles and customers. Access is checked
+// by that name, so the ADMIN role keeps it exactly and can't be deleted, as either would lock every admin out.
+// Its abbreviation can change.
 const isSuperAdminRole = (role) => role?.name === Roles.ADM;
 
-// Renaming or deleting the ADMIN role would lock every admin out, and a second ADMIN role would grant
-// full access to whoever is given it.
-const protectSuperAdminRole = (roleDoc, newName) => {
-  if (isSuperAdminRole(roleDoc)) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "The ADMIN role can't be renamed or deleted.");
-  }
-  if (typeof newName === "string" && newName.trim().toUpperCase() === Roles.ADM) {
+// A second role named ADMIN would grant full access to whoever is given it.
+const refuseSecondAdminRole = (name) => {
+  if (typeof name === "string" && name.trim().toUpperCase() === Roles.ADM) {
     throw new ApiError(httpStatus.BAD_REQUEST, "There can only be one ADMIN role.");
   }
 };
@@ -22,7 +22,7 @@ const createRole = async (reqBody) => {
   if (!reqBody.name || !reqBody.abbreviation) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Name and Abbreviation both needed.");
   }
-  protectSuperAdminRole(null, reqBody.name);
+  refuseSecondAdminRole(reqBody.name);
 
   const roleObj = {
     name: reqBody.name,
@@ -39,48 +39,29 @@ const createRole = async (reqBody) => {
 };
 
 const updateRole = async (reqBody) => {
-  const roleDoc = await Role.findOne({
-    where: { id: reqBody.role_id },
-  });
-  let temp = [];
-  if (!roleDoc) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Role not found");
+  const roleDoc = await findByIdOr404(Role, reqBody.role_id, "Role");
+  const name = filledIfSent(reqBody, "name");
+  const abbreviation = filledIfSent(reqBody, "abbreviation");
+
+  if (name !== undefined) {
+    if (isSuperAdminRole(roleDoc)) {
+      // Sending the name it already has is fine, so the edit form can send every field.
+      if (name.trim() !== Roles.ADM) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "The ADMIN role can't be renamed.");
+      }
+    } else {
+      refuseSecondAdminRole(name);
+      roleDoc["name"] = name;
+    }
   }
-  protectSuperAdminRole(roleDoc, reqBody.name);
-  if (
-    reqBody.name &&
-    typeof reqBody.name !== "undefined" &&
-    reqBody.name !== ""
-  ) {
-    roleDoc["name"] = reqBody.name;
-    temp.push(1);
+  if (abbreviation !== undefined) {
+    roleDoc["abbreviation"] = abbreviation;
   }
-  if (
-    reqBody.abbreviation &&
-    typeof reqBody.abbreviation !== "undefined" &&
-    reqBody.abbreviation !== ""
-  ) {
-    roleDoc["abbreviation"] = reqBody.abbreviation;
-    temp.push(2);
-  }
-  if (temp.length > 0 && temp.length < 2)
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      "Name and Abbreviation both needed."
-    );
   await roleDoc.save();
-  return roleDoc ? roleDoc : {};
+  return roleDoc;
 };
 
-
-
-const findRoleById = async (id) => {
-  const result = await Role.findOne({ where: { id: id } });
-  if (!result) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Data not found");
-  }
-  return result;
-};
+const findRoleById = async (id) => findByIdOr404(Role, id, "Role");
 
 const getAllRoles = async () => {
   const roleDoc = await Role.findAll({ where: { is_active: 1 } });
@@ -94,13 +75,10 @@ const getAllRoles = async () => {
 };
 
 const deleteRole = async (reqBody) => {
-  const roleDoc = await Role.findOne({
-    where: { id: reqBody.role_id },
-  });
-  if (!roleDoc) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
+  const roleDoc = await findByIdOr404(Role, reqBody.role_id, "Role");
+  if (isSuperAdminRole(roleDoc)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "The ADMIN role can't be deleted.");
   }
-  protectSuperAdminRole(roleDoc);
   if (await Admin.count({ where: { role_id: roleDoc.id } })) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Move this role's admins to another role first.");
   }

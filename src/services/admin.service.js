@@ -21,6 +21,8 @@ const ApiError = require("../utils/ApiError");
 const config = require("../config/config");
 const validateEmail = require("../helpers/validateEmail");
 const pageOf = require("../helpers/pageOf");
+const findByIdOr404 = require("../helpers/findByIdOr404");
+const filledIfSent = require("../helpers/filledIfSent");
 const { accessSummary, trialCutoff } = require("../utils/access");
 const {
   sendUserCredentials,
@@ -49,26 +51,40 @@ const presentCustomer = (user) => ({
   access: accessSummary(user),
 });
 
+// The email holds the only copy of a new account's password, so callers create the account in a transaction
+// that this rolls back when the email fails. Otherwise nobody could sign in to the account, and trying again
+// would fail because the address is taken.
+const emailCredentials = async (send, email, password) => {
+  try {
+    await send(email, password);
+  } catch (error) {
+    logger.error(error);
+    const failure = new ApiError(
+      httpStatus.BAD_GATEWAY,
+      "The email with the password couldn't be sent, so the account wasn't created. Try again."
+    );
+    failure.expose = true;
+    failure.cause = error;
+    throw failure;
+  }
+};
+
 const createAdminUser = async (reqBody) => {
   const password = generatePassword();
-  const adminObj = {
-    name: reqBody.name,
-    role_id: reqBody.role_id,
-    email_id: reqBody.email,
-    password: await bcrypt.hash(password, 10),
-  };
-  const adminDoc = await Admin.create(adminObj);
-  if (!adminDoc) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Unable to create admin");
-  }
-
-  let isSend = await sendAdminCredentials(reqBody.email, password);
-  if (!isSend) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Unable to send Credentials to This Email"
+  const hashed = await bcrypt.hash(password, 10);
+  const adminDoc = await sequelize.transaction(async (transaction) => {
+    const doc = await Admin.create(
+      {
+        name: reqBody.name,
+        role_id: reqBody.role_id,
+        email_id: reqBody.email,
+        password: hashed,
+      },
+      { transaction }
     );
-  }
+    await emailCredentials(sendAdminCredentials, reqBody.email, password);
+    return doc;
+  });
   // create() returns every column, including the password hash; don't send that back.
   const admin = adminDoc.get({ plain: true });
   delete admin.password;
@@ -154,9 +170,8 @@ const resetAdminPassword = async (reqBody) => {
   return "|=> Password Changed Successfully. <=|";
 };
 
-const findAdminById = async (id) => {
-  const adminDoc = await Admin.findOne({
-    where: { id: id },
+const findAdminById = async (id) =>
+  findByIdOr404(Admin, id, "Admin", {
     include: [
       {
         model: Role,
@@ -164,28 +179,20 @@ const findAdminById = async (id) => {
       },
     ],
   });
-  return adminDoc ? adminDoc : {};
-};
 
 const updateAdmin = async (reqBody) => {
-  const { name, role_id, user } = reqBody;
-  const email = typeof reqBody.email === "string" ? reqBody.email.trim() : "";
+  const { user } = reqBody;
+  const adminDoc = await findByIdOr404(Admin, reqBody.admin_id, "Admin");
+  const name = filledIfSent(reqBody, "name");
+  const email = filledIfSent(reqBody, "email")?.trim();
+  const role_id = filledIfSent(reqBody, "role_id");
 
-  const adminDoc = await Admin.findOne({
-    where: {
-      id: reqBody.admin_id,
-    },
-  });
-  if (!adminDoc) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Admin not found");
-  }
-
-  if (typeof name === "string" && name.trim() !== "") {
+  if (name !== undefined) {
     adminDoc.name = name.trim();
   }
 
   // The column is email_id. Writing "email" used to report success without saving anything.
-  if (email !== "" && email !== adminDoc.email_id) {
+  if (email !== undefined && email !== adminDoc.email_id) {
     if (!validateEmail(email)) {
       throw new ApiError(httpStatus.BAD_REQUEST, "Invalid Email");
     }
@@ -198,7 +205,7 @@ const updateAdmin = async (reqBody) => {
     adminDoc.email_id = email;
   }
 
-  if (role_id !== undefined && role_id !== "" && Number(role_id) !== adminDoc.role_id) {
+  if (role_id !== undefined && Number(role_id) !== adminDoc.role_id) {
     // Changing your own role could leave nobody able to manage admins.
     if (adminDoc.id === user?.id) {
       throw new ApiError(httpStatus.BAD_REQUEST, "You can't change your own role.");
@@ -331,28 +338,23 @@ const adminAddUser = async (name, email, id, payment_status) => {
 
   // Generate a temporary password
   const password = generatePassword();
+  const hashed = await bcrypt.hash(password, 10);
 
-  // Create new user
-  const newUser = await User.create({
-    name,
-    email,
-    password: await bcrypt.hash(password, 10),
-    payment_status: paymentStatus,
-    created_by: id,
-  });
-
-  if (!newUser) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Unable to create user");
-  }
-
-  // Send user credentials
-  let isSend = await sendUserCredentials(email, password);
-  if (!isSend) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Unable to send Credentials to This Email"
+  // Kept only if the email with the password goes out.
+  const newUser = await sequelize.transaction(async (transaction) => {
+    const doc = await User.create(
+      {
+        name,
+        email,
+        password: hashed,
+        payment_status: paymentStatus,
+        created_by: id,
+      },
+      { transaction }
     );
-  }
+    await emailCredentials(sendUserCredentials, email, password);
+    return doc;
+  });
 
   // create() returns every column, including the password hash; don't send that back.
   const user = newUser.get({ plain: true });
