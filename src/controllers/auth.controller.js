@@ -1,13 +1,12 @@
 const { status: httpStatus } = require("http-status");
 
 const validatePassword = require("../helpers/validatePassword");
-const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
 const { authService } = require("../services");
 const pick = require("../utils/pick");
 const responseWrapper = require("../config/responseWrapper");
 
-const sendOTP = catchAsync(async (req, res, next) => {
+const sendOTP = async (req, res, next) => {
   const { email, type } = pick(req.body, ["email", "type"]);
 
   try {
@@ -34,9 +33,9 @@ const sendOTP = catchAsync(async (req, res, next) => {
       );
     }
   }
-});
+};
 
-const login = catchAsync(async (req, res) => {
+const login = async (req, res) => {
   try {
     const response = await authService.login(req.body);
     return responseWrapper(res, response, "Successfully Logged in.");
@@ -54,9 +53,9 @@ const login = catchAsync(async (req, res) => {
 
     return responseWrapper(res, null, message, statusCode);
   }
-});
+};
 
-const resetPassword = catchAsync(async (req, res) => {
+const resetPassword = async (req, res) => {
   const { new_password, confirm_password } = req.body;
 
   if (!validatePassword(new_password)) {
@@ -97,9 +96,9 @@ const resetPassword = catchAsync(async (req, res) => {
       );
     }
   }
-});
+};
 
-const forgotPassword = catchAsync(async (req, res) => {
+const forgotPassword = async (req, res) => {
   let status = await authService.forgotPassword(
     req.body.email,
     req.body.otp,
@@ -116,12 +115,12 @@ const forgotPassword = catchAsync(async (req, res) => {
     code: httpStatus.OK,
     message: "Your Password Changed Successfully, Please login to continue",
   });
-});
+};
 
-const logout = catchAsync(async (req, res) => {
+const logout = async (req, res) => {
   const response = await authService.logout(req.body,req.headers);
   return responseWrapper(res, response, "Successfully Logged out.");
-});
+};
 
 module.exports = {
   login,

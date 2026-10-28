@@ -3,12 +3,11 @@ const jwt = require("jsonwebtoken");
 
 const { User, UserToken } = require("../models");
 const tokenTypes = require("../config/tokens");
-const catchAsync = require("../utils/catchAsync");
 
 const config = require("../config/config");
 const responseWrapper = require("../config/responseWrapper");
 
-const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
+const verifyAuthJWTToken = async (req, res, next) => {
   const token = req.headers["x-access-token"];
 
   if (!token) {
@@ -49,9 +48,9 @@ const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
 
   req.body.user = user;
   next();
-});
+};
 
-const validateNewBlogBody = catchAsync(async (req, res, next) => {
+const validateNewBlogBody = async (req, res, next) => {
   const { heading, description, categories, type } = req.body;
 
   if (!heading || !description || !categories || !type) {
@@ -71,7 +70,7 @@ const validateNewBlogBody = catchAsync(async (req, res, next) => {
   req.body.categories = categoryNames;
 
   next();
-});
+};
 
 module.exports = {
   verifyAuthJWTToken,

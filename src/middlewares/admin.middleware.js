@@ -3,13 +3,12 @@ const jwt = require("jsonwebtoken");
 
 const { Admin } = require("../models");
 const validateEmail = require("../helpers/validateEmail");
-const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
 
 const { roleService } = require("../services");
 const config = require("../config/config");
 
-const validateCreateAdminBody = catchAsync(async (req, res, next) => {
+const validateCreateAdminBody = async (req, res, next) => {
   const { name, email, role_id } = req.body;
 
   if (!name || !email || !role_id) {
@@ -32,9 +31,9 @@ const validateCreateAdminBody = catchAsync(async (req, res, next) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "|=> Invalid Role Id <=|");
 
   next();
-});
+};
 
-const validateLoginAdminBody = catchAsync(async (req, res, next) => {
+const validateLoginAdminBody = async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -48,9 +47,9 @@ const validateLoginAdminBody = catchAsync(async (req, res, next) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "|=> Invalid Email <=|");
   }
   next();
-});
+};
 
-const validateJWTtoken = catchAsync(async (req, res, next) => {
+const validateJWTtoken = async (req, res, next) => {
   const token = req.header("x-access-token");
   if (!token) {
     throw new ApiError(
@@ -80,9 +79,9 @@ const validateJWTtoken = catchAsync(async (req, res, next) => {
   req.user = admin;
   req.body.user = admin;
   next();
-});
+};
 
-const validateResetPassordBody = catchAsync(async (req, res, next) => {
+const validateResetPassordBody = async (req, res, next) => {
   const { old_password, new_password, confirm_password } = req.body;
 
   if (!old_password || !new_password || !confirm_password) {
@@ -99,7 +98,7 @@ const validateResetPassordBody = catchAsync(async (req, res, next) => {
     );
   }
   next();
-});
+};
 
 module.exports = {
   validateCreateAdminBody,

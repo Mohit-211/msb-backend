@@ -1,11 +1,10 @@
 const { status: httpStatus } = require("http-status");
 
-const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
 const { adminService } = require("../services");
 const responseWrapper = require("../config/responseWrapper");
 
-const createAdminUser = catchAsync(async (req, res) => {
+const createAdminUser = async (req, res) => {
   const user = await adminService.createAdminUser(req.body);
 
   if (!user) {
@@ -13,14 +12,14 @@ const createAdminUser = catchAsync(async (req, res) => {
   }
 
   res.status(httpStatus.OK).send({ code: httpStatus.OK, data: user });
-});
+};
 
-const getProfile = catchAsync(async (req, res) => {
+const getProfile = async (req, res) => {
   const response = await adminService.getProfile(req.body);
   return responseWrapper(res, response, "Successfully get profile");
-});
+};
 
-const loginAdminUser = catchAsync(async (req, res) => {
+const loginAdminUser = async (req, res) => {
   try {
     const response = await adminService.loginAdminUser(req.body);
     res
@@ -42,67 +41,67 @@ const loginAdminUser = catchAsync(async (req, res) => {
       });
     }
   }
-});
+};
 
-const resetAdminPassword = catchAsync(async (req, res) => {
+const resetAdminPassword = async (req, res) => {
   const response = await adminService.resetAdminPassword(req.body);
   res.status(httpStatus.OK).send({ code: httpStatus.OK, data: response });
-});
+};
 
-const findAdminById = catchAsync(async (req, res) => {
+const findAdminById = async (req, res) => {
   const adminDoc = await adminService.findAdminById(req.query.id);
   return responseWrapper(res, adminDoc, "", httpStatus.OK);
-});
+};
 
-const updateAdmin = catchAsync(async (req, res) => {
+const updateAdmin = async (req, res) => {
   const response = await adminService.updateAdmin(req.body);
   return responseWrapper(res, response, "Admin Updated Successfully");
-});
+};
 
-const deleteAdmin = catchAsync(async (req, res) => {
+const deleteAdmin = async (req, res) => {
   await adminService.deleteAdmin(req.body);
   res.status(httpStatus.OK).send({
     code: httpStatus.NO_CONTENT,
     message: "Deleted Successfull.",
     data: "",
   });
-});
+};
 
-const getAllAdmins = catchAsync(async (req, res) => {
+const getAllAdmins = async (req, res) => {
   const users = await adminService.getAllAdmins();
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: users ? "Success" : "Failed",
     data: users,
   });
-});
+};
 
 //=======================================USER APIS=========================================
 
-const getAllUsers = catchAsync(async (req, res) => {
+const getAllUsers = async (req, res) => {
   const users = await adminService.getAllUsers();
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: users ? "Success" : "Failed",
     data: users,
   });
-});
+};
 
-const getUserById = catchAsync(async (req, res) => {
+const getUserById = async (req, res) => {
   const response = await adminService.getUserById(req.query.id);
   return responseWrapper(res, response, "Successfully Get user", httpStatus.OK);
-});
+};
 
-const deleteUser = catchAsync(async (req, res) => {
+const deleteUser = async (req, res) => {
   await adminService.deleteUser(req.body);
   res.status(httpStatus.OK).send({
     code: httpStatus.NO_CONTENT,
     message: "Deleted Successfull.",
     data: "",
   });
-});
+};
 
-const adminAddUser = catchAsync(async (req, res) => {
+const adminAddUser = async (req, res) => {
   // created_by comes from the signed-in admin, not from the request body.
   const users = await adminService.adminAddUser(
     req.body.name,
@@ -117,73 +116,73 @@ const adminAddUser = catchAsync(async (req, res) => {
     message: "New User Created Successfully.",
     data: "users",
   });
-});
+};
 
-const getUserCount = catchAsync(async (req, res) => {
+const getUserCount = async (req, res) => {
   const user = await adminService.getUserCount();
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: user ? "Success" : "Failed",
     data: user,
   });
-});
+};
 
-const getUserCountByMonth = catchAsync(async (req, res) => {
+const getUserCountByMonth = async (req, res) => {
   const user = await adminService.getUserCountByMonth();
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: user ? "Success" : "Failed",
     data: user,
   });
-});
+};
 
-const getBlogCount = catchAsync(async (req, res) => {
+const getBlogCount = async (req, res) => {
   const user = await adminService.getBlogCount();
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: user ? "Success" : "Failed",
     data: user,
   });
-});
+};
 
-const getCategoryCount = catchAsync(async (req, res) => {
+const getCategoryCount = async (req, res) => {
   const user = await adminService.getCategoryCount();
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: user ? "Success" : "Failed",
     data: user,
   });
-});
+};
 
-const getMostViewedStory = catchAsync(async (req, res) => {
+const getMostViewedStory = async (req, res) => {
   const user = await adminService.getMostViewedStory();
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: user ? "Success" : "Failed",
     data: user,
   });
-});
+};
 
-const getMostLikedStory = catchAsync(async (req, res) => {
+const getMostLikedStory = async (req, res) => {
   const user = await adminService.getMostLikedStory();
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     message: user ? "Success" : "Failed",
     data: user,
   });
-});
+};
 
 //update organization status
-const updatePaymentStatus = catchAsync(async (req, res) => {
+const updatePaymentStatus = async (req, res) => {
   let paymentStatus = await adminService.updatePaymentStatus(req.body);
   res.status(httpStatus.OK).send({
     code: httpStatus.OK,
     data: paymentStatus,
     message: "Successfully update Payment status",
   });
-});
+};
 
-const getLoginLogsOfUser = catchAsync(async (req, res) => {
+const getLoginLogsOfUser = async (req, res) => {
   const loginLogs = await adminService.getLoginLogsOfUser(req.body);
   if (!loginLogs) {
     throw new ApiError(
@@ -196,7 +195,7 @@ const getLoginLogsOfUser = catchAsync(async (req, res) => {
     data: loginLogs,
     message: "Successfully Get Logs",
   });
-});
+};
 
 module.exports = {
   createAdminUser,

@@ -1,4 +1,5 @@
 const openai = require('../../config/openAi.js')
+const config = require('../../config/config.js')
 
 async function generateStoryFromTitle(userTitle) {
   const messages = [
@@ -30,10 +31,10 @@ async function generateStoryFromTitle(userTitle) {
   ];
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: config.OPENAI_MODEL,
     messages,
     temperature: 0.8,
-    max_tokens: 800,
+    max_completion_tokens: 800,
     top_p: 0.9,
   });
 
@@ -86,10 +87,10 @@ async function generateShortStory(input) {
   ];
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: config.OPENAI_MODEL,
     messages,
     temperature: 0.7,
-    max_tokens: 500, 
+    max_completion_tokens: 500,
     top_p: 0.9,
   });
 

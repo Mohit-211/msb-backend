@@ -29,14 +29,7 @@ const sendForgotPasswordOTP = async (to, otp) => {
     text: `Please click on the following link to verify your email`,
     html: `${forgotPasswordSendOTPFormat(otp)}`,
   };
-  transport.sendMail(message, (error, info) => {
-    if (error) {
-      console.log("Email sent error:  ", error);
-      return false;
-    } else {
-      return true;
-    }
-  });
+  return await transport.sendMail(message);
 };
 
 const sendResetPasswordConfirmationMail = async (to) => {

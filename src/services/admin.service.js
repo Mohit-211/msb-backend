@@ -29,12 +29,11 @@ const generatePassword = () => crypto.randomBytes(9).toString("base64url");
 
 const createAdminUser = async (reqBody) => {
   const password = generatePassword();
-  let salt = bcrypt.genSaltSync(10);
   const adminObj = {
     name: reqBody.name,
     role_id: reqBody.role_id,
     email_id: reqBody.email,
-    password: bcrypt.hashSync(password, salt),
+    password: await bcrypt.hash(password, 10),
   };
   const adminDoc = await Admin.create(adminObj);
   if (!adminDoc) {
@@ -113,9 +112,8 @@ const resetAdminPassword = async (reqBody) => {
     );
   }
 
-  let salt = bcrypt.genSaltSync(10);
   const userObj = {
-    password: bcrypt.hashSync(confirm_password, salt),
+    password: await bcrypt.hash(confirm_password, 10),
   };
 
   const isUserPasswordUpdate = await Admin.update(userObj, {
@@ -282,15 +280,14 @@ const adminAddUser = async (name, email, id) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "Email already exists");
   }
 
-  // Generate password and salt
-  let salt = bcrypt.genSaltSync(10);
+  // Generate a temporary password
   const password = generatePassword();
 
   // Create new user
   const newUser = await User.create({
     name,
     email,
-    password: bcrypt.hashSync(password, salt),
+    password: await bcrypt.hash(password, 10),
     created_by: id,
   });
 

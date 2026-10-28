@@ -40,8 +40,9 @@ const envVarsSchema = Joi.object({
 
   ACCESSDOMAINS: Joi.string().required(),
 
-  // OpenAI
-  OPENAI_KEY: Joi.string().optional(),
+  // OpenAI. The client throws without a key, so require it here where the error is clear.
+  OPENAI_KEY: Joi.string().required(),
+  OPENAI_MODEL: Joi.string().default("gpt-4o"),
 
   // Absolute path to uploaded files (images, docs, ...). Defaults to public/uploads for local dev.
   STORAGE_DIR: Joi.string().optional(),
@@ -104,6 +105,8 @@ module.exports = {
   defaultLimit: envVars.DEFAULT_API_DATA_LIMIT,
 
   OPENAI_KEY: envVars.OPENAI_KEY,
+
+  OPENAI_MODEL: envVars.OPENAI_MODEL,
 
   STORAGE_DIR: path.resolve(
     envVars.STORAGE_DIR || path.join(__dirname, "../../public/uploads")

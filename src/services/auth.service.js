@@ -93,9 +93,8 @@ const resetPassword = async (reqBody, currentToken) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "Incorrect Old Password.");
   }
 
-  let salt = bcrypt.genSaltSync(10);
   const userObj = {
-    password: bcrypt.hashSync(confirm_password, salt),
+    password: await bcrypt.hash(confirm_password, 10),
   };
 
   await User.update(userObj, {
@@ -167,9 +166,8 @@ const forgotPassword = async (email, otp, password, confirm_Password) => {
     { where: { id: otpDoc.id } }
   );
 
-  let salt = bcrypt.genSaltSync(10);
   await User.update(
-    { password: bcrypt.hashSync(password, salt) },
+    { password: await bcrypt.hash(password, 10) },
     { where: { id: user.id } }
   );
 
