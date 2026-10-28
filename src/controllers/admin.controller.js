@@ -103,10 +103,11 @@ const deleteUser = catchAsync(async (req, res) => {
 });
 
 const adminAddUser = catchAsync(async (req, res) => {
+  // created_by comes from the signed-in admin, not from the request body.
   const users = await adminService.adminAddUser(
     req.body.name,
     req.body.email,
-    req.body.id,
+    req.body.user.id,
   );
   if (!users) {
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Unable to add users");

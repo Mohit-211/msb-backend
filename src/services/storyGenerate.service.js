@@ -4,12 +4,22 @@ const slugify = require("slugify");
 const { AiStory } = require("../models");
 const { generateStoryFromTitle, generateShortStory } = require('../utils/rag-story-generator/generator')
 
+// Each request is sent to OpenAI, so cap what a user can submit. Titles also become the 255-character slug.
+const MAX_TITLE_LENGTH = 200;
+const MAX_STORY_LENGTH = 5000;
+
 const generateNewStory = async (body) => {
     let { user, input } = body;
     if (!input) {
         throw new ApiError(
             httpStatus.BAD_REQUEST,
             "Please provide input and title"
+        );
+    }
+    if (typeof input !== "string" || input.length > MAX_TITLE_LENGTH) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            `The story title can be at most ${MAX_TITLE_LENGTH} characters`
         );
     }
 
@@ -105,6 +115,12 @@ const generateSortStory = async (body) => {
         throw new ApiError(
             httpStatus.BAD_REQUEST,
             "Please provide description, input, title"
+        );
+    }
+    if (typeof description !== "string" || description.length > MAX_STORY_LENGTH) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            `The story can be at most ${MAX_STORY_LENGTH} characters`
         );
     }
 

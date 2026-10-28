@@ -20,8 +20,10 @@ const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
     );
   }
 
-  const payload = jwt.verify(token, config.jwt.secret);
-  if (!payload) {
+  let payload;
+  try {
+    payload = jwt.verify(token, config.jwt.secret, { algorithms: ["HS256"] });
+  } catch (err) {
     return responseWrapper(res, "", "Invalid Token", httpStatus.UNAUTHORIZED);
   }
 

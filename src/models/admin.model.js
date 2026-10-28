@@ -73,6 +73,13 @@ Admin.init(
     createdAt: "created_at",
     updatedAt: "updated_at",
     deletedAt: "deleted_at",
+    // Never send secrets in API responses. Code that checks a password uses Admin.scope("withPassword").
+    defaultScope: {
+      attributes: { exclude: ["password", "remember_token", "otp", "is_otp_valid"] },
+    },
+    scopes: {
+      withPassword: {},
+    },
   }
 );
 

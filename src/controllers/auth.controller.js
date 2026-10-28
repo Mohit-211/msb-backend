@@ -48,13 +48,8 @@ const login = catchAsync(async (req, res) => {
       // If the error is an instance of ApiError, customize status code and message
       statusCode = error.statusCode;
       message = error.message;
-    }
-
-    // Handle specific error cases
-    if (error.message === "Email does not exist.") {
-      statusCode = httpStatus.BAD_REQUEST;
-    } else if (error.message === "Invalid Password. Please try again.") {
-      statusCode = httpStatus.UNAUTHORIZED;
+    } else {
+      console.error(error);
     }
 
     return responseWrapper(res, null, message, statusCode);
@@ -83,7 +78,10 @@ const resetPassword = catchAsync(async (req, res) => {
   }
 
   try {
-    const response = await authService.resetPassword(req.body);
+    const response = await authService.resetPassword(
+      req.body,
+      req.headers["x-access-token"]
+    );
     return responseWrapper(res, response, "Password changed Successfully.");
   } catch (error) {
     if (error instanceof ApiError) {

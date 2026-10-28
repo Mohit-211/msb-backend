@@ -20,8 +20,11 @@ const envVarsSchema = Joi.object({
   CENTRAL_MYSQL_PORT: Joi.number().default(3306),
   CENTRAL_MYSQL_PASSWORD: Joi.string().allow("").optional(),
 
-  // Authentication
-  JWT_SECRET: Joi.string().required(),
+  // Authentication. Secrets need 32+ characters, e.g. from `openssl rand -hex 32`.
+  JWT_SECRET: Joi.string().min(32).required(),
+
+  // Signs admin tokens. It must differ from JWT_SECRET so a user token can never pass as an admin token.
+  ADMIN_JWT_SECRET: Joi.string().min(32).invalid(Joi.ref("JWT_SECRET")).required(),
 
   JWT_ACCESS_EXPIRATION_MINUTES: Joi.number().default(30),
 
@@ -73,6 +76,8 @@ module.exports = {
 
   jwt: {
     secret: envVars.JWT_SECRET,
+
+    adminSecret: envVars.ADMIN_JWT_SECRET,
 
     accessExpirationMinutes: envVars.JWT_ACCESS_EXPIRATION_MINUTES,
   },

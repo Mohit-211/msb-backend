@@ -40,11 +40,21 @@ async function generateStoryFromTitle(userTitle) {
   const sanitizedStory = sanitizeText(completion.choices[0].message.content);
   return sanitizedStory;
 }
+// The output is stored and later published as blog HTML, so escape anything the model (or a crafted prompt) adds.
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function sanitizeText(text) {
   return text
     .split("\n")
     .filter(line => line.trim() !== "")
-    .map(line => `<p>${line}</p>`)
+    .map(line => `<p>${escapeHtml(line)}</p>`)
     .join("");
 }
 

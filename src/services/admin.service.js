@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const { Sequelize, Op } = require("sequelize");
@@ -23,8 +24,11 @@ const {
 } = require("./email.service");
 const Blog = require("../models/blog.model");
 
+// Temporary passwords emailed to new admins and users. Unlike Math.random, crypto can't be predicted.
+const generatePassword = () => crypto.randomBytes(9).toString("base64url");
+
 const createAdminUser = async (reqBody) => {
-  const password = Math.random().toString(36).substring(2, 12);
+  const password = generatePassword();
   let salt = bcrypt.genSaltSync(10);
   const adminObj = {
     name: reqBody.name,
@@ -44,7 +48,10 @@ const createAdminUser = async (reqBody) => {
       "Unable to send Credentials to This Email"
     );
   }
-  return adminDoc;
+  // create() returns every column, including the password hash; don't send that back.
+  const admin = adminDoc.get({ plain: true });
+  delete admin.password;
+  return admin;
 };
 
 const getProfile = async (body) => {
@@ -67,32 +74,20 @@ const getProfile = async (body) => {
 };
 
 const loginAdminUser = async (reqBody) => {
-  const user = await Admin.findOne({ where: { email_id: reqBody.email } });
+  const user = await Admin.scope("withPassword").findOne({
+    where: { email_id: reqBody.email, is_active: true },
+  });
 
-  if (!user) {
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      "User not found. Please check your email and try again."
-    );
+  // The same answer for an unknown email and a wrong password, so sign-in can't be used to find accounts.
+  if (!user || !user.password || !(await bcrypt.compare(reqBody.password, user.password))) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid email or password.");
   }
 
-  const validPass = await bcrypt.compare(reqBody.password, user.password);
-  if (!validPass) {
-    throw new ApiError(
-      httpStatus.UNAUTHORIZED,
-      "Invalid password. Please try again."
-    );
-  }
-
-  const token = jwt.sign(
-    {
-      id: user.id,
-      role_id: user.role_id,
-      is_backlisted: false,
-    },
-    Buffer.from(config.jwt.secret, "hex"),
-    { algorithm: "HS256", expiresIn: "2d" }
-  );
+  // The role is read from the database on each request, so the token only carries the admin id.
+  const token = jwt.sign({ id: user.id }, config.jwt.adminSecret, {
+    algorithm: "HS256",
+    expiresIn: "2d",
+  });
   const response = {
     name: user.name,
     email: user.email_id,
@@ -104,7 +99,7 @@ const loginAdminUser = async (reqBody) => {
 const resetAdminPassword = async (reqBody) => {
   const { old_password, confirm_password, user } = reqBody;
 
-  const userDoc = await Admin.findByPk(user.id);
+  const userDoc = await Admin.scope("withPassword").findByPk(user.id);
 
   if (!userDoc) {
     throw new ApiError(httpStatus.BAD_REQUEST, "|=> User Not Found. <=|");
@@ -289,7 +284,7 @@ const adminAddUser = async (name, email, id) => {
 
   // Generate password and salt
   let salt = bcrypt.genSaltSync(10);
-  const password = Math.random().toString(36).substring(2, 12);
+  const password = generatePassword();
 
   // Create new user
   const newUser = await User.create({

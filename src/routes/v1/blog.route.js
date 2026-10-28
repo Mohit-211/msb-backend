@@ -2,24 +2,24 @@ const express = require('express');
 const router = express.Router();
 
 const { blogController,userController } = require('../../controllers');
-const adminMiddleware = require('../../middlewares/admin.middleware');
 const authMiddleware = require("../../middlewares/auth.middleware")
+const { adminAuth, userAuth } = require('../../middlewares/access.middleware');
 
-router.post('/createBlog', [ adminMiddleware.validateJWTtoken, authMiddleware.validateNewBlogBody ], blogController.createBlog);
-router.get('/getAllBlogs', blogController.getAllBlogs);
-router.get('/getBlogById', blogController.getBlogById);
-router.put('/updateBlog', [ adminMiddleware.validateJWTtoken ], blogController.updateBlog);
-router.delete('/deleteBlog', [ adminMiddleware.validateJWTtoken ], blogController.deleteBlog);
+router.post('/createBlog', [ ...adminAuth, authMiddleware.validateNewBlogBody ], blogController.createBlog);
+router.get('/getAllBlogs', adminAuth, blogController.getAllBlogs);
+router.get('/getBlogById', adminAuth, blogController.getBlogById);
+router.put('/updateBlog', adminAuth, blogController.updateBlog);
+router.delete('/deleteBlog', adminAuth, blogController.deleteBlog);
 
-router.post('/like', [authMiddleware.verifyAuthJWTToken], blogController.likeAndDislikeBlog);
-router.get('/getLikesCount',[authMiddleware.verifyAuthJWTToken],blogController.getLikesCountAndUserLikeStatus)
+router.post('/like', userAuth, blogController.likeAndDislikeBlog);
+router.get('/getLikesCount', userAuth, blogController.getLikesCountAndUserLikeStatus)
 
-router.post('/comment', [authMiddleware.verifyAuthJWTToken], blogController.createCommenetInBlog);
-router.get('/getAllCommentByBlogId',[authMiddleware.verifyAuthJWTToken,],blogController.getAllCommentsByBlogId);
+router.post('/comment', userAuth, blogController.createCommenetInBlog);
+router.get('/getAllCommentByBlogId', userAuth, blogController.getAllCommentsByBlogId);
 
-router.get('/getAllLikesByBlogId',blogController.getAllLikesByBlogId)
-router.get('/getCommentsByBlogId',blogController.getCommentsByBlogId)
-router.delete('/deleteCommentByAdmin',[adminMiddleware.validateJWTtoken],blogController.deleteCommentByAdmin)
+router.get('/getAllLikesByBlogId', adminAuth, blogController.getAllLikesByBlogId)
+router.get('/getCommentsByBlogId', adminAuth, blogController.getCommentsByBlogId)
+router.delete('/deleteCommentByAdmin', adminAuth, blogController.deleteCommentByAdmin)
 
 router.post('/:blog_id', userController.getBlogById);
 

@@ -2,38 +2,35 @@ const express = require('express');
 const router = express.Router();
 
 const {sectionContentController,bannerContentController,cardContentController,socialLoginController} = require('../../controllers');
-const adminMiddleware = require('../../middlewares/admin.middleware');
+const { adminAuth } = require('../../middlewares/access.middleware');
 
 
 //section content api
-router.post('/createSectionContent',[adminMiddleware.validateJWTtoken] , sectionContentController.createSectionContent);
+router.post('/createSectionContent', adminAuth, sectionContentController.createSectionContent);
 router.get('/getAllSectionContent', sectionContentController.getAllSectionContent);
 router.get('/findSectionContentById', sectionContentController.findSectionContentById);
-router.put('/updateSectionContent', [adminMiddleware.validateJWTtoken], sectionContentController.updateSectionContent);
-router.delete('/deleteSectionContent', [adminMiddleware.validateJWTtoken], sectionContentController.deleteSectionContent);
+router.put('/updateSectionContent', adminAuth, sectionContentController.updateSectionContent);
+router.delete('/deleteSectionContent', adminAuth, sectionContentController.deleteSectionContent);
 
 //banner content api
-router.post('/createBannerContent',[adminMiddleware.validateJWTtoken] , bannerContentController.createBannerContent);
+router.post('/createBannerContent', adminAuth, bannerContentController.createBannerContent);
 router.get('/getAllBannerContent', bannerContentController.getAllBannerContent);
 router.get('/findBannerContentById', bannerContentController.findBannerContentById);
-router.put('/updateBannerContent', [adminMiddleware.validateJWTtoken], bannerContentController.updateBannerContent);
-router.delete('/deleteBannerContent', [adminMiddleware.validateJWTtoken], bannerContentController.deleteBannerContent);
+router.put('/updateBannerContent', adminAuth, bannerContentController.updateBannerContent);
+router.delete('/deleteBannerContent', adminAuth, bannerContentController.deleteBannerContent);
 
 //card content api
-router.post('/createCardContent',[adminMiddleware.validateJWTtoken] , cardContentController.createCardContent);
+router.post('/createCardContent', adminAuth, cardContentController.createCardContent);
 router.get('/getAllCardContent', cardContentController.getAllCardContent);
 router.get('/findCardContentById', cardContentController.findCardContentById);
-router.put('/updateCardContent', [adminMiddleware.validateJWTtoken], cardContentController.updateCardContent);
-router.delete('/deleteCardContent', [adminMiddleware.validateJWTtoken], cardContentController.deleteCardContent);
+router.put('/updateCardContent', adminAuth, cardContentController.updateCardContent);
+router.delete('/deleteCardContent', adminAuth, cardContentController.deleteCardContent);
 
 //social login api
-router.post('/createSocialLogin',[adminMiddleware.validateJWTtoken] , socialLoginController.createSocialLogin);
+router.post('/createSocialLogin', adminAuth, socialLoginController.createSocialLogin);
 router.get('/getAllSocialLogin', socialLoginController.getAllSocialLogin);
 router.get('/findSocialLoginById', socialLoginController.findSocialLoginById);
-router.put('/updateSocialLogin', [adminMiddleware.validateJWTtoken], socialLoginController.updateSocialLogin);
-router.delete('/deleteSocialLogin', [adminMiddleware.validateJWTtoken], socialLoginController.deleteSocialLogin);
-
-
-
+router.put('/updateSocialLogin', adminAuth, socialLoginController.updateSocialLogin);
+router.delete('/deleteSocialLogin', adminAuth, socialLoginController.deleteSocialLogin);
 
 module.exports = router;

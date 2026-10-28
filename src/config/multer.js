@@ -1,7 +1,13 @@
+const crypto = require('crypto');
 const multer = require('multer');
 const path = require('path');
+const { status: httpStatus } = require('http-status');
 
 const { STORAGE_DIR } = require("./config");
+const ApiError = require('../utils/ApiError');
+
+// Per file. Large enough for the blog and section videos.
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 // Set storage engine
 const storage = multer.diskStorage({
@@ -16,7 +22,8 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const ext = file.mimetype.split("/")[1];
-        cb(null, `${file.fieldname}-${Date.now()}.${ext}`);
+        // The random part keeps names unguessable and stops files saved in the same millisecond from overwriting each other.
+        cb(null, `${file.fieldname}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`);
     }
 });
 
@@ -29,13 +36,13 @@ function checkFileType(file, cb) {
     if (mimetype && extname) {
         return cb(null, true);
     } else {
-        cb('Error: Images and videos only!');
+        cb(new ApiError(httpStatus.BAD_REQUEST, 'Only images and videos can be uploaded.'));
     }
 }
 
-// Init upload
-const upload = multer({
+const parseUpload = multer({
     storage: storage,
+    limits: { fileSize: MAX_FILE_SIZE },
     fileFilter: function (req, file, cb) {
         checkFileType(file, cb);
     }
@@ -43,5 +50,18 @@ const upload = multer({
     { name: 'images', maxCount: 10 },
     { name: 'videos', maxCount: 10 }
 ]);
+
+// Runs after authentication. Multer replaces req.body, so put back the user the auth middleware attached
+// (this also stops a form field called "user" from impersonating someone).
+const upload = (req, res, next) => {
+    const user = req.body?.user;
+    parseUpload(req, res, (err) => {
+        if (err) {
+            return next(err instanceof multer.MulterError ? new ApiError(httpStatus.BAD_REQUEST, err.message) : err);
+        }
+        if (user) req.body.user = user;
+        next();
+    });
+};
 
 module.exports = upload;

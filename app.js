@@ -8,17 +8,22 @@ const path = require("path");
 const config = require("./src/config/config.js");
 const routes = require("./src/routes/v1");
 const morgan = require("./src/config/morgan.js");
-const { authLimiter } = require("./src/middlewares/rateLimiter.js");
+const logger = require("./src/config/logger.js");
 const ApiError = require("./src/utils/ApiError.js");
-const upload = require("./src/config/multer.js");
 
 require("./src/models");
 
 const app = express();
 
+// The API runs behind nginx. Trust it for the client IP that rate limiting uses.
+app.set("trust proxy", 1);
+
 app.use(
   cors({
-    origin: config.accessDomains.split(","),
+    origin: config.accessDomains
+      .split(",")
+      .map((origin) => origin.trim().replace(/\/+$/, ""))
+      .filter(Boolean),
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
   }),
@@ -29,15 +34,15 @@ if (config.env !== "test") {
   app.use(morgan.errorHandler);
 }
 
-const PUBLIC_DIR = path.resolve(__dirname, "./public");
+// The website and admin panel are other origins and show the uploaded images and videos.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
 const { STORAGE_DIR } = config;
 
 app.use("/images", express.static(path.join(STORAGE_DIR, "images")));
 app.use("/videos", express.static(path.join(STORAGE_DIR, "videos")));
 app.use("/gifs", express.static(path.join(STORAGE_DIR, "gifs")));
 app.use("/docs", express.static(path.join(STORAGE_DIR, "docs")));
-
-app.use(helmet());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -49,7 +54,7 @@ app.use((req, res, next) => {
 
 app.use(compression());
 
-app.use("/api/v1", upload, routes);
+app.use("/api/v1", routes);
 
 app.get("/api/healthcheck", (req, res) => {
   res.status(200).send({
@@ -57,14 +62,22 @@ app.get("/api/healthcheck", (req, res) => {
   });
 });
 
-app.use(express.static(PUBLIC_DIR));
-
-if (config.env === "production") {
-  app.use("/v1/auth", authLimiter);
-}
-
 app.use((req, res, next) => {
   next(new ApiError(httpStatus.NOT_FOUND, "Not found"));
+});
+
+// Errors go out as JSON. Client errors keep their message; anything else is logged and hidden.
+// Express recognises error handlers by their four arguments, so `next` must stay.
+app.use((err, req, res, next) => {
+  const code = err.statusCode || err.status;
+  const status = Number.isInteger(code) && code >= 400 && code < 600 ? code : httpStatus.INTERNAL_SERVER_ERROR;
+  if (status >= 500) logger.error(err);
+  res.locals.errorMessage = err.message;
+  res.status(status).json({
+    success: false,
+    status,
+    message: status < 500 ? err.message : "Internal Server Error",
+  });
 });
 
 module.exports = app;

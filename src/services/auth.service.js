@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
+const { Op } = require("sequelize");
 
 const {
   OTP,
@@ -10,47 +11,60 @@ const {
 } = require("../models");
 const tokenTypes = require("../config/tokens");
 const ApiError = require("../utils/ApiError");
+const validatePassword = require("../helpers/validatePassword");
 const {
   sendForgotPasswordOTP,
   sendResetPasswordConfirmationMail,
 } = require("./email.service");
 const { generateAuthTokens } = require("./token.service");
 
+const OTP_TYPE = "forget_password";
+const MAX_OTP_ATTEMPTS = 5;
+// Wrong guesses per OTP id. In memory is enough while the API runs as a single process.
+const failedOtpAttempts = new Map();
+
+const invalidOtpError = () =>
+  new ApiError(httpStatus.BAD_REQUEST, "Invalid or expired OTP.");
+
 // Users are created by admins, so the only OTP left is the forgot-password one.
 const sendOTP = async ({ email, type }) => {
-  if (type !== "forget_password") {
+  if (type !== OTP_TYPE) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid OTP type");
   }
+  if (!email || typeof email !== "string") {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Please Enter Required Fields : [email]");
+  }
 
-  const generatedOTP = crypto.randomInt(0, 10000).toString().padStart(4, "0");
-  await sendForgotPasswordOTP(email, generatedOTP);
+  // Respond the same way whether or not the account exists, so this can't be used to find accounts.
+  const user = await User.findOne({ where: { email, is_active: true } });
+  if (!user) {
+    return null;
+  }
 
-  let otpObj = {
-    email: email,
+  const generatedOTP = crypto.randomInt(0, 1000000).toString().padStart(6, "0");
+
+  await OTP.update({ is_active: false }, { where: { email: user.email } });
+  const otpDoc = await OTP.create({
+    email: user.email,
     code: generatedOTP,
-    type: type,
-  };
-
-  await OTP.update({ is_active: false }, { where: { email: email } });
-  let otpDoc = await OTP.create(otpObj);
+    type: OTP_TYPE,
+  });
+  await sendForgotPasswordOTP(user.email, generatedOTP);
   return otpDoc;
 };
 
 const login = async (reqBody) => {
-  const user = await User.findOne({
-    where: { email: reqBody.email, is_active: true },
-  });
+  const { email, password } = reqBody;
+  const user =
+    typeof email === "string" && typeof password === "string"
+      ? await User.scope("withPassword").findOne({
+          where: { email, is_active: true },
+        })
+      : null;
 
-  if (!user) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Email does not exist.");
-  }
-
-  const validPass = await bcrypt.compare(reqBody.password, user.password);
-  if (!validPass) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "Invalid Password. Please try again."
-    );
+  // The same answer for an unknown email and a wrong password, so sign-in can't be used to find accounts.
+  if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid email or password.");
   }
 
   const token = await generateAuthTokens(user);
@@ -65,10 +79,16 @@ const login = async (reqBody) => {
   return userObj;
 };
 
-const resetPassword = async (reqBody) => {
+const resetPassword = async (reqBody, currentToken) => {
   const { old_password, confirm_password, user } = reqBody;
 
-  const validPass = await bcrypt.compare(old_password, user?.password);
+  const userDoc = await User.scope("withPassword").findOne({
+    where: { id: user?.id, is_active: true },
+  });
+  const validPass =
+    userDoc?.password &&
+    typeof old_password === "string" &&
+    (await bcrypt.compare(old_password, userDoc.password));
   if (!validPass) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Incorrect Old Password.");
   }
@@ -78,17 +98,17 @@ const resetPassword = async (reqBody) => {
     password: bcrypt.hashSync(confirm_password, salt),
   };
 
-  const isUserPasswordUpdate = await User.update(userObj, {
-    where: { id: user?.id, is_active: true },
+  await User.update(userObj, {
+    where: { id: userDoc.id, is_active: true },
   });
 
-  if (!isUserPasswordUpdate) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to Change Password."
-    );
-  }
-  const token = await generateAuthTokens(user);
+  // Sign out every other device. The session making this request stays signed in.
+  await UserToken.update(
+    { is_active: false },
+    { where: { user_id: userDoc.id, token: { [Op.ne]: currentToken } } }
+  );
+
+  const token = await generateAuthTokens(userDoc);
   const response = {
     tokens: token,
   };
@@ -100,27 +120,6 @@ const forgotPassword = async (email, otp, password, confirm_Password) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "Please Enter Required Fields");
   }
 
-  const user = await User.findOne({
-    where: { email: email },
-  });
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User Not Found");
-  }
-  const myOtp = await OTP.findOne({
-    where: { email: email, code: otp, is_verified: false },
-  });
-
-  if (!myOtp || Object.keys(myOtp).length === 0) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid OTP Entered");
-  }
-  if (myOtp.used === 1) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "OTP has already taken");
-  }
-
-  if (myOtp.expires_at < new Date()) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "OTP has already Expired");
-  }
-
   if (password !== confirm_Password) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
@@ -128,26 +127,57 @@ const forgotPassword = async (email, otp, password, confirm_Password) => {
     );
   }
 
+  if (!validatePassword(password)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Password should have a minimum length of 8 characters and must have at least 2 digits and No Blank Space"
+    );
+  }
+
+  const user =
+    typeof email === "string"
+      ? await User.findOne({ where: { email, is_active: true } })
+      : null;
+  const otpDoc =
+    user &&
+    (await OTP.findOne({
+      where: { email: user.email, type: OTP_TYPE, is_active: true, is_verified: false },
+      order: [["id", "DESC"]],
+    }));
+
+  if (!otpDoc || otpDoc.otp_expiration_time < new Date()) {
+    throw invalidOtpError();
+  }
+
+  if (String(otp) !== otpDoc.code) {
+    const attempts = (failedOtpAttempts.get(otpDoc.id) || 0) + 1;
+    if (attempts >= MAX_OTP_ATTEMPTS) {
+      failedOtpAttempts.delete(otpDoc.id);
+      await OTP.update({ is_active: false }, { where: { id: otpDoc.id } });
+    } else {
+      failedOtpAttempts.set(otpDoc.id, attempts);
+    }
+    throw invalidOtpError();
+  }
+
+  // Each code works once.
+  failedOtpAttempts.delete(otpDoc.id);
   await OTP.update(
-    { is_verified: false },
-    { where: { email: email, code: otp } }
+    { is_active: false, is_verified: true },
+    { where: { id: otpDoc.id } }
   );
 
   let salt = bcrypt.genSaltSync(10);
-  let isUpdate = await User.update(
-    {
-      password: bcrypt.hashSync(password, salt),
-      hash: bcrypt.hashSync(password),
-      updated_at: new Date(),
-    },
-    {
-      where: { email: user.email },
-    }
+  await User.update(
+    { password: bcrypt.hashSync(password, salt) },
+    { where: { id: user.id } }
   );
-  if (isUpdate) {
-    await sendResetPasswordConfirmationMail(user.email);
-  }
-  return isUpdate;
+
+  // Sign out every device, since whoever knew the old password may hold a session.
+  await UserToken.update({ is_active: false }, { where: { user_id: user.id } });
+
+  await sendResetPasswordConfirmationMail(user.email);
+  return true;
 };
 
 const logout = async (reqBody, headers) => {

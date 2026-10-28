@@ -59,22 +59,27 @@ const validateJWTtoken = catchAsync(async (req, res, next) => {
     );
   }
 
+  let payload;
   try {
-    req.user = jwt.verify(token, Buffer.from(config?.jwt?.secret, "hex"), {
-      algorithm: "HS256",
-    });
-    if (req?.user?.is_backlisted)
-      return res.status(httpStatus.UNAUTHORIZED).send({
-        status: httpStatus.UNAUTHORIZED,
-        data: "|=> Invalid Token <=|",
-      });
-    req.body["user"] = req.user;
-    next();
+    payload = jwt.verify(token, config.jwt.adminSecret, { algorithms: ["HS256"] });
   } catch (err) {
+    payload = null;
+  }
+
+  // Load the admin on every request, so deleted or deactivated admins lose access at once
+  // and role changes apply immediately instead of when the token expires.
+  const admin = payload?.id
+    ? await Admin.findOne({ where: { id: payload.id, is_active: true } })
+    : null;
+  if (!admin) {
     return res
       .status(httpStatus.UNAUTHORIZED)
       .send({ status: httpStatus.UNAUTHORIZED, data: "|=> Invalid Token <=|" });
   }
+
+  req.user = admin;
+  req.body.user = admin;
+  next();
 });
 
 const validateResetPassordBody = catchAsync(async (req, res, next) => {

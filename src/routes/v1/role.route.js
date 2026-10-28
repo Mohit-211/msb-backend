@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 
 const {roleController} = require('../../controllers');
-const adminMiddleware = require('../../middlewares/admin.middleware');
+const { adminAuth, superAdminAuth } = require('../../middlewares/access.middleware');
 
-router.post('/create', roleController.createRole);
-router.get('/all', roleController.getAllRoles);
-router.get('/getRolebyId', roleController.findRoleById);
-router.put('/editRole', [adminMiddleware.validateJWTtoken],roleController.updateRole);
-router.delete('/deleteRole',[adminMiddleware.validateJWTtoken], roleController.deleteRole);
+router.post('/create', superAdminAuth, roleController.createRole);
+router.get('/all', adminAuth, roleController.getAllRoles);
+router.get('/getRolebyId', adminAuth, roleController.findRoleById);
+router.put('/editRole', superAdminAuth, roleController.updateRole);
+router.delete('/deleteRole', superAdminAuth, roleController.deleteRole);
 
 module.exports = router;

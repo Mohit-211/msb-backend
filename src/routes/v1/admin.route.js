@@ -3,30 +3,31 @@ const router = express.Router();
 
 const { adminController } = require('../../controllers');
 const adminMiddleware = require('../../middlewares/admin.middleware');
-const roleMiddleware = require('../../middlewares/role.middleware');
+const { adminAuth, superAdminAuth } = require('../../middlewares/access.middleware');
+const { authLimiter } = require('../../middlewares/rateLimiter');
 
-router.post('/register', adminController.createAdminUser);
-router.post('/login', [adminMiddleware.validateLoginAdminBody], adminController.loginAdminUser);
-router.post('/change-password', [adminMiddleware.validateResetPassordBody, adminMiddleware.validateJWTtoken], adminController.resetAdminPassword);
-router.put('/updateAdmin',[adminMiddleware.validateJWTtoken],adminController.updateAdmin);
-router.delete('/deleteAdmin',[adminMiddleware.validateJWTtoken],adminController.deleteAdmin);
-router.get('/getAllAdmin',[adminMiddleware.validateJWTtoken,roleMiddleware.isSuperAdmin],adminController.getAllAdmins);
-router.get('/getAdminProfile',[adminMiddleware.validateJWTtoken],adminController.getProfile);
-router.get('/getAdminById',adminController.findAdminById);
+router.post('/register', [...superAdminAuth, adminMiddleware.validateCreateAdminBody], adminController.createAdminUser);
+router.post('/login', [authLimiter, adminMiddleware.validateLoginAdminBody], adminController.loginAdminUser);
+router.post('/change-password', [authLimiter, ...adminAuth, adminMiddleware.validateResetPassordBody], adminController.resetAdminPassword);
+router.put('/updateAdmin', superAdminAuth, adminController.updateAdmin);
+router.delete('/deleteAdmin', superAdminAuth, adminController.deleteAdmin);
+router.get('/getAllAdmin', superAdminAuth, adminController.getAllAdmins);
+router.get('/getAdminProfile', adminAuth, adminController.getProfile);
+router.get('/getAdminById', superAdminAuth, adminController.findAdminById);
 
-router.get('/getAllUsers',[adminMiddleware.validateJWTtoken,roleMiddleware.isSuperAdmin],adminController.getAllUsers);
-router.get('/getUserById',adminController.getUserById);
-router.delete('/deleteUser',[adminMiddleware.validateJWTtoken],adminController.deleteUser);
-router.post('/createUser',[adminMiddleware.validateJWTtoken],adminController.adminAddUser);
+router.get('/getAllUsers', superAdminAuth, adminController.getAllUsers);
+router.get('/getUserById', superAdminAuth, adminController.getUserById);
+router.delete('/deleteUser', superAdminAuth, adminController.deleteUser);
+router.post('/createUser', superAdminAuth, adminController.adminAddUser);
 
-router.post('/updatepaymentStatus',adminController.updatePaymentStatus)
+router.post('/updatepaymentStatus', superAdminAuth, adminController.updatePaymentStatus)
 
-router.get('/getUserCount',[adminMiddleware.validateJWTtoken,roleMiddleware.isSuperAdmin],adminController.getUserCount);
-router.get('/getUserCountByMonth',adminController.getUserCountByMonth);
-router.get('/getBlogCount',adminController.getBlogCount);
-router.get('/getCategoryCount',adminController.getCategoryCount);
-router.get('/getMostViewedStory',adminController.getMostViewedStory);
-router.get('/getMostLikedStory',adminController.getMostLikedStory);
-router.post('/getLoginLogsOfUser',adminController.getLoginLogsOfUser);
+router.get('/getUserCount', superAdminAuth, adminController.getUserCount);
+router.get('/getUserCountByMonth', adminAuth, adminController.getUserCountByMonth);
+router.get('/getBlogCount', adminAuth, adminController.getBlogCount);
+router.get('/getCategoryCount', adminAuth, adminController.getCategoryCount);
+router.get('/getMostViewedStory', adminAuth, adminController.getMostViewedStory);
+router.get('/getMostLikedStory', adminAuth, adminController.getMostLikedStory);
+router.post('/getLoginLogsOfUser', superAdminAuth, adminController.getLoginLogsOfUser);
 
 module.exports = router;
